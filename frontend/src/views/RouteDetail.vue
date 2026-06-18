@@ -14,6 +14,7 @@ import Tag from 'primevue/tag'
 import Toast from 'primevue/toast'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { routeApi, markerApi, equipmentApi } from '../api'
+import { copyToClipboard } from '../utils'
 
 const props = defineProps({
   id: { type: [String, Number], required: true },
@@ -128,6 +129,16 @@ async function saveMarker() {
   } catch (err) {
     const detail = err?.response?.data?.error || '请稍后重试'
     toast.add({ severity: 'error', summary: '保存失败', detail, life: 3000 })
+  }
+}
+
+/** @param {import('../api').Marker} marker */
+async function copyCoordinates(marker) {
+  try {
+    await copyToClipboard(marker.coordinates)
+    toast.add({ severity: 'success', summary: '复制成功', detail: marker.coordinates, life: 2000 })
+  } catch {
+    toast.add({ severity: 'error', summary: '复制失败', life: 2500 })
   }
 }
 
@@ -267,9 +278,17 @@ onMounted(async () => {
         <span class="notes">{{ data.notes || '—' }}</span>
       </template>
     </Column>
-    <Column header="操作" style="width: 8rem">
+    <Column header="操作" style="width: 11rem">
       <template #body="{ data }">
         <div class="actions">
+          <Button
+            icon="pi pi-copy"
+            text
+            rounded
+            severity="info"
+            v-tooltip="'复制坐标'"
+            @click="copyCoordinates(data)"
+          />
           <Button icon="pi pi-pencil" text rounded @click="openEdit(data)" />
           <Button icon="pi pi-trash" text rounded severity="danger" @click="confirmDelete(data)" />
         </div>
