@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onActivated } from 'vue'
+import { ref, computed, onMounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
@@ -24,7 +24,26 @@ const confirm = useConfirm()
 const routes = ref([])
 const stats = ref(null)
 const statsLoading = ref(false)
+const difficultyStats = ref({简单: 0, 中等: 0, 困难: 0, 极难: 0})
+const difficultyStatsLoading = ref(false)
 const loading = ref(false)
+
+const difficultyTotal = computed(() => {
+  const d = difficultyStats.value
+  return d.简单 + d.中等 + d.困难 + d.极难
+})
+
+const difficultyBars = computed(() => {
+  const d = difficultyStats.value
+  const total = difficultyTotal.value || 1
+  return [
+    { label: '简单', count: d.简单, color: '#22c55e', percent: Math.round((d.简单 / total) * 100) },
+    { label: '中等', count: d.中等, color: '#3b82f6', percent: Math.round((d.中等 / total) * 100) },
+    { label: '困难', count: d.困难, color: '#f59e0b', percent: Math.round((d.困难 / total) * 100) },
+    { label: '极难', count: d.极难, color: '#ef4444', percent: Math.round((d.极难 / total) * 100) },
+  ]
+})
+
 const dialogVisible = ref(false)
 const editingRoute = ref(null)
 const form = ref({ name: '', difficulty: '', region: '', bestMonth: '', mileage: 0, days: 0 })
@@ -94,6 +113,18 @@ async function loadStats() {
     toast.add({ severity: 'error', summary: '加载失败', detail: '无法获取统计数据', life: 3000 })
   } finally {
     statsLoading.value = false
+  }
+}
+
+async function loadDifficultyStats() {
+  difficultyStatsLoading.value = true
+  try {
+    difficultyStats.value = await statsApi.difficultyStats()
+  } catch {
+    difficultyStats.value = {简单: 0, 中等: 0, 困难: 0, 极难: 0}
+    toast.add({ severity: 'error', summary: '加载失败', detail: '无法获取难度分布', life: 3000 })
+  } finally {
+    difficultyStatsLoading.value = false
   }
 }
 
@@ -182,7 +213,7 @@ async function saveRoute() {
       toast.add({ severity: 'success', summary: '已创建', life: 2000 })
     }
     dialogVisible.value = false
-    await Promise.all([loadRoutes(), loadRegions(), loadDifficulties(), loadStats()])
+    await Promise.all([loadRoutes(), loadRegions(), loadDifficulties(), loadStats(), loadDifficultyStats()])
   } catch (err) {
     const detail = err?.response?.data?.error || '请稍后重试'
     toast.add({ severity: 'error', summary: '保存失败', detail, life: 3000 })
@@ -194,7 +225,7 @@ async function cloneRoute(route) {
   try {
     await routeApi.clone(route.id)
     toast.add({ severity: 'success', summary: '克隆成功', detail: `已创建「${route.name}副本」`, life: 3000 })
-    await Promise.all([loadRoutes(), loadRegions(), loadDifficulties(), loadStats()])
+    await Promise.all([loadRoutes(), loadRegions(), loadDifficulties(), loadStats(), loadDifficultyStats()])
   } catch (err) {
     const detail = err?.response?.data?.error || '请稍后重试'
     toast.add({ severity: 'error', summary: '克隆失败', detail, life: 3000 })
@@ -212,7 +243,7 @@ function confirmDelete(route) {
       try {
         await routeApi.remove(route.id)
         toast.add({ severity: 'success', summary: '已删除', life: 2000 })
-        await Promise.all([loadRoutes(), loadDifficulties(), loadStats()])
+        await Promise.all([loadRoutes(), loadDifficulties(), loadStats(), loadDifficultyStats()])
       } catch {
         toast.add({ severity: 'error', summary: '删除失败', life: 3000 })
       }
@@ -226,13 +257,14 @@ function goDetail(route) {
 }
 
 onMounted(async () => {
-  await Promise.all([loadRegions(), loadDifficulties(), loadStats()])
+  await Promise.all([loadRegions(), loadDifficulties(), loadStats(), loadDifficultyStats()])
   await loadRoutes()
 })
 
 onActivated(() => {
   loadRoutes()
   loadStats()
+  loadDifficultyStats()
 })
 </script>
 
@@ -286,6 +318,31 @@ onActivated(() => {
       />
       <Button label="新建路线" icon="pi pi-plus" @click="openCreate" />
     </div>
+  </div>
+
+  <div class="difficulty-distribution">
+    <div class="difficulty-distribution-title">路线难度分布</div>
+    <div v-if="difficultyStatsLoading" class="difficulty-loading">加载中...</div>
+    <template v-else>
+      <div class="difficulty-bar-container">
+        <div
+          v-for="bar in difficultyBars"
+          :key="bar.label"
+          class="difficulty-bar-segment"
+          :style="{ width: bar.percent + '%', backgroundColor: bar.color }"
+        >
+          <span v-if="bar.percent >= 15" class="difficulty-bar-text">{{ bar.label }} {{ bar.count }}</span>
+        </div>
+      </div>
+      <div class="difficulty-legend">
+        <div v-for="bar in difficultyBars" :key="bar.label" class="difficulty-legend-item">
+          <span class="difficulty-legend-dot" :style="{ backgroundColor: bar.color }"></span>
+          <span class="difficulty-legend-label">{{ bar.label }}</span>
+          <span class="difficulty-legend-count">{{ bar.count }} 条</span>
+          <span class="difficulty-legend-percent">({{ bar.percent }}%)</span>
+        </div>
+      </div>
+    </template>
   </div>
 
   <div class="stats-bar">
@@ -424,6 +481,86 @@ onActivated(() => {
 .page-header h1 {
   font-size: 1.5rem;
   font-weight: 700;
+}
+
+.difficulty-distribution {
+  background: #ffffff;
+  border-radius: 0.75rem;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+  border: 1px solid #e2e8f0;
+}
+
+.difficulty-distribution-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 0.75rem;
+}
+
+.difficulty-loading {
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.difficulty-bar-container {
+  display: flex;
+  height: 2rem;
+  border-radius: 0.375rem;
+  overflow: hidden;
+  background: #f1f5f9;
+}
+
+.difficulty-bar-segment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2px;
+  transition: width 0.4s ease;
+}
+
+.difficulty-bar-text {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+.difficulty-legend {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.difficulty-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.difficulty-legend-dot {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.difficulty-legend-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #475569;
+}
+
+.difficulty-legend-count {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.difficulty-legend-percent {
+  font-size: 0.75rem;
+  color: #94a3b8;
 }
 
 .stats-bar {

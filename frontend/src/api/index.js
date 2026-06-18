@@ -32,6 +32,8 @@ export const routeApi = {
 
 export const statsApi = {
   get: () => api.get('/stats').then((r) => r.data),
+  /** @returns {Promise<{简单: number, 中等: number, 困难: number, 极难: number}>} */
+  difficultyStats: () => api.get('/routes/difficulty-stats').then((r) => r.data),
 }
 
 export const markerApi = {

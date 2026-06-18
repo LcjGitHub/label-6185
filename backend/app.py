@@ -112,6 +112,25 @@ def list_difficulties():
         conn.close()
 
 
+@app.get("/api/routes/difficulty-stats")
+def difficulty_stats():
+    """按难度分组统计路线数量。"""
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT difficulty, COUNT(*) AS count FROM routes WHERE difficulty IS NOT NULL AND difficulty != '' GROUP BY difficulty"
+        ).fetchall()
+        result = {row["difficulty"]: row["count"] for row in rows}
+        return jsonify({
+            "简单": result.get("简单", 0),
+            "中等": result.get("中等", 0),
+            "困难": result.get("困难", 0),
+            "极难": result.get("极难", 0),
+        })
+    finally:
+        conn.close()
+
+
 @app.get("/api/routes/<int:route_id>")
 def get_route(route_id):
     """获取单条路线详情。"""
