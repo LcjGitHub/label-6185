@@ -62,7 +62,7 @@ async function loadRoute() {
     route.value = await routeApi.get(routeId.value)
   } catch {
     toast.add({ severity: 'error', summary: '路线不存在', life: 3000 })
-    router.push('/')
+    router.push('/routes')
   } finally {
     loadingRoute.value = false
   }

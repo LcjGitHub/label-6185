@@ -1,6 +1,10 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onActivated } from 'vue'
+import { useToast } from 'primevue/usetoast'
+import Toast from 'primevue/toast'
 import { statsApi } from '../api'
+
+const toast = useToast()
 
 const stats = ref({ routeCount: 0, markerCount: 0, waterCount: 0, restCount: 0 })
 const loading = ref(false)
@@ -16,15 +20,20 @@ async function loadStats() {
   loading.value = true
   try {
     stats.value = await statsApi.get()
+  } catch {
+    toast.add({ severity: 'error', summary: '加载失败', detail: '无法获取统计数据', life: 3000 })
   } finally {
     loading.value = false
   }
 }
 
 onMounted(loadStats)
+onActivated(loadStats)
 </script>
 
 <template>
+  <Toast />
+
   <div class="page-header">
     <h1>路线统计概览</h1>
   </div>
