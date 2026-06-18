@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
@@ -31,6 +31,12 @@ const markers = ref([])
 const equipment = ref([])
 const markerFilterType = ref(MARKER_FILTER_TYPES.ALL)
 const filteredMarkers = computed(() => filterMarkersByType(markers.value, markerFilterType.value))
+const markerEmptyText = computed(() => {
+  if (markerFilterType.value === MARKER_FILTER_TYPES.ALL) {
+    return '暂无标记点'
+  }
+  return '当前筛选下暂无匹配标记点'
+})
 const loadingRoute = ref(false)
 const loadingMarkers = ref(false)
 const loadingEquipment = ref(false)
@@ -126,6 +132,9 @@ async function saveMarker() {
     } else {
       await markerApi.create(routeId.value, payload)
       toast.add({ severity: 'success', summary: '标记已创建', life: 2000 })
+      if (markerFilterType.value !== MARKER_FILTER_TYPES.ALL && payload.type !== markerFilterType.value) {
+        toast.add({ severity: 'info', summary: '已保存，当前筛选下不可见', detail: '可切换至「全部」查看', life: 3500 })
+      }
     }
     dialogVisible.value = false
     await loadMarkers()
@@ -225,6 +234,13 @@ onMounted(async () => {
   await loadMarkers()
   await loadEquipment()
 })
+
+watch(routeId, async () => {
+  markerFilterType.value = MARKER_FILTER_TYPES.ALL
+  await loadRoute()
+  await loadMarkers()
+  await loadEquipment()
+})
 </script>
 
 <template>
@@ -314,7 +330,7 @@ onMounted(async () => {
       </template>
     </Column>
     <template #empty>
-      <div class="empty">暂无标记点</div>
+      <div class="empty">{{ markerEmptyText }}</div>
     </template>
   </DataTable>
 
