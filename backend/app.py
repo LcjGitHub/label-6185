@@ -1,0 +1,215 @@
+"""冷门徒步路线水源标记 — Flask API 服务。"""
+
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+
+from database import init_db, get_connection
+
+app = Flask(__name__)
+CORS(app)
+
+
+def row_to_dict(row):
+    """将 sqlite3.Row 转为普通字典。"""
+    return dict(row) if row else None
+
+
+# ── 路线 CRUD ──────────────────────────────────────────────
+
+
+@app.get("/api/routes")
+def list_routes():
+    """获取全部路线列表。"""
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT id, name, difficulty FROM routes ORDER BY id"
+        ).fetchall()
+        return jsonify([row_to_dict(r) for r in rows])
+    finally:
+        conn.close()
+
+
+@app.get("/api/routes/<int:route_id>")
+def get_route(route_id):
+    """获取单条路线详情。"""
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            "SELECT id, name, difficulty FROM routes WHERE id = ?", (route_id,)
+        ).fetchone()
+        if not row:
+            return jsonify({"error": "路线不存在"}), 404
+        return jsonify(row_to_dict(row))
+    finally:
+        conn.close()
+
+
+@app.post("/api/routes")
+def create_route():
+    """新建路线。"""
+    data = request.get_json(silent=True) or {}
+    name = (data.get("name") or "").strip()
+    difficulty = (data.get("difficulty") or "").strip()
+    if not name or not difficulty:
+        return jsonify({"error": "名称和难度不能为空"}), 400
+    conn = get_connection()
+    try:
+        cur = conn.execute(
+            "INSERT INTO routes (name, difficulty) VALUES (?, ?)",
+            (name, difficulty),
+        )
+        conn.commit()
+        row = conn.execute(
+            "SELECT id, name, difficulty FROM routes WHERE id = ?",
+            (cur.lastrowid,),
+        ).fetchone()
+        return jsonify(row_to_dict(row)), 201
+    finally:
+        conn.close()
+
+
+@app.put("/api/routes/<int:route_id>")
+def update_route(route_id):
+    """更新路线。"""
+    data = request.get_json(silent=True) or {}
+    name = (data.get("name") or "").strip()
+    difficulty = (data.get("difficulty") or "").strip()
+    if not name or not difficulty:
+        return jsonify({"error": "名称和难度不能为空"}), 400
+    conn = get_connection()
+    try:
+        cur = conn.execute(
+            "UPDATE routes SET name = ?, difficulty = ? WHERE id = ?",
+            (name, difficulty, route_id),
+        )
+        conn.commit()
+        if cur.rowcount == 0:
+            return jsonify({"error": "路线不存在"}), 404
+        row = conn.execute(
+            "SELECT id, name, difficulty FROM routes WHERE id = ?", (route_id,)
+        ).fetchone()
+        return jsonify(row_to_dict(row))
+    finally:
+        conn.close()
+
+
+@app.delete("/api/routes/<int:route_id>")
+def delete_route(route_id):
+    """删除路线（级联删除标记点）。"""
+    conn = get_connection()
+    try:
+        cur = conn.execute("DELETE FROM routes WHERE id = ?", (route_id,))
+        conn.commit()
+        if cur.rowcount == 0:
+            return jsonify({"error": "路线不存在"}), 404
+        return "", 204
+    finally:
+        conn.close()
+
+
+# ── 标记点 CRUD ────────────────────────────────────────────
+
+
+@app.get("/api/routes/<int:route_id>/markers")
+def list_markers(route_id):
+    """获取某条路线的全部标记点。"""
+    conn = get_connection()
+    try:
+        route = conn.execute(
+            "SELECT id FROM routes WHERE id = ?", (route_id,)
+        ).fetchone()
+        if not route:
+            return jsonify({"error": "路线不存在"}), 404
+        rows = conn.execute(
+            """SELECT id, route_id, marker_type AS type, coordinates, notes
+               FROM markers WHERE route_id = ? ORDER BY id""",
+            (route_id,),
+        ).fetchall()
+        return jsonify([row_to_dict(r) for r in rows])
+    finally:
+        conn.close()
+
+
+@app.post("/api/routes/<int:route_id>/markers")
+def create_marker(route_id):
+    """在某条路线下新建标记点。"""
+    data = request.get_json(silent=True) or {}
+    marker_type = (data.get("type") or "").strip()
+    coordinates = (data.get("coordinates") or "").strip()
+    notes = (data.get("notes") or "").strip()
+    if marker_type not in ("水源", "休息"):
+        return jsonify({"error": "类型必须为「水源」或「休息」"}), 400
+    if not coordinates:
+        return jsonify({"error": "坐标不能为空"}), 400
+    conn = get_connection()
+    try:
+        route = conn.execute(
+            "SELECT id FROM routes WHERE id = ?", (route_id,)
+        ).fetchone()
+        if not route:
+            return jsonify({"error": "路线不存在"}), 404
+        cur = conn.execute(
+            """INSERT INTO markers (route_id, marker_type, coordinates, notes)
+               VALUES (?, ?, ?, ?)""",
+            (route_id, marker_type, coordinates, notes),
+        )
+        conn.commit()
+        row = conn.execute(
+            """SELECT id, route_id, marker_type AS type, coordinates, notes
+               FROM markers WHERE id = ?""",
+            (cur.lastrowid,),
+        ).fetchone()
+        return jsonify(row_to_dict(row)), 201
+    finally:
+        conn.close()
+
+
+@app.put("/api/markers/<int:marker_id>")
+def update_marker(marker_id):
+    """更新标记点。"""
+    data = request.get_json(silent=True) or {}
+    marker_type = (data.get("type") or "").strip()
+    coordinates = (data.get("coordinates") or "").strip()
+    notes = (data.get("notes") or "").strip()
+    if marker_type not in ("水源", "休息"):
+        return jsonify({"error": "类型必须为「水源」或「休息」"}), 400
+    if not coordinates:
+        return jsonify({"error": "坐标不能为空"}), 400
+    conn = get_connection()
+    try:
+        cur = conn.execute(
+            """UPDATE markers SET marker_type = ?, coordinates = ?, notes = ?
+               WHERE id = ?""",
+            (marker_type, coordinates, notes, marker_id),
+        )
+        conn.commit()
+        if cur.rowcount == 0:
+            return jsonify({"error": "标记点不存在"}), 404
+        row = conn.execute(
+            """SELECT id, route_id, marker_type AS type, coordinates, notes
+               FROM markers WHERE id = ?""",
+            (marker_id,),
+        ).fetchone()
+        return jsonify(row_to_dict(row))
+    finally:
+        conn.close()
+
+
+@app.delete("/api/markers/<int:marker_id>")
+def delete_marker(marker_id):
+    """删除标记点。"""
+    conn = get_connection()
+    try:
+        cur = conn.execute("DELETE FROM markers WHERE id = ?", (marker_id,))
+        conn.commit()
+        if cur.rowcount == 0:
+            return jsonify({"error": "标记点不存在"}), 404
+        return "", 204
+    finally:
+        conn.close()
+
+
+if __name__ == "__main__":
+    init_db()
+    app.run(host="0.0.0.0", port=7000, debug=True)
