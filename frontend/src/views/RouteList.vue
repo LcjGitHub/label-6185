@@ -22,7 +22,9 @@ const routes = ref([])
 const loading = ref(false)
 const dialogVisible = ref(false)
 const editingRoute = ref(null)
-const form = ref({ name: '', difficulty: '' })
+const form = ref({ name: '', difficulty: '', region: '' })
+const selectedRegion = ref('')
+const regionOptions = ref([])
 
 const difficultyOptions = [
   { label: '简单', value: '简单' },
@@ -47,7 +49,7 @@ function getSeverity(difficulty) {
 async function loadRoutes() {
   loading.value = true
   try {
-    routes.value = await routeApi.list()
+    routes.value = await routeApi.list(selectedRegion.value || undefined)
   } catch {
     toast.add({ severity: 'error', summary: '加载失败', detail: '无法获取路线列表', life: 3000 })
   } finally {
@@ -55,21 +57,37 @@ async function loadRoutes() {
   }
 }
 
+async function loadRegions() {
+  try {
+    const regions = await routeApi.regions()
+    regionOptions.value = [
+      { label: '全部地区', value: '' },
+      ...regions.map((r) => ({ label: r, value: r })),
+    ]
+  } catch {
+    regionOptions.value = [{ label: '全部地区', value: '' }]
+  }
+}
+
+async function onRegionChange() {
+  await loadRoutes()
+}
+
 function openCreate() {
   editingRoute.value = null
-  form.value = { name: '', difficulty: '中等' }
+  form.value = { name: '', difficulty: '中等', region: '' }
   dialogVisible.value = true
 }
 
 /** @param {import('../api').Route} route */
 function openEdit(route) {
   editingRoute.value = route
-  form.value = { name: route.name, difficulty: route.difficulty }
+  form.value = { name: route.name, difficulty: route.difficulty, region: route.region }
   dialogVisible.value = true
 }
 
 async function saveRoute() {
-  if (!form.value.name.trim() || !form.value.difficulty) {
+  if (!form.value.name.trim() || !form.value.difficulty || !form.value.region.trim()) {
     toast.add({ severity: 'warn', summary: '请填写完整', life: 2500 })
     return
   }
@@ -112,7 +130,10 @@ function goDetail(route) {
   router.push(`/routes/${route.id}`)
 }
 
-onMounted(loadRoutes)
+onMounted(async () => {
+  await loadRegions()
+  await loadRoutes()
+})
 </script>
 
 <template>
@@ -121,7 +142,18 @@ onMounted(loadRoutes)
 
   <div class="page-header">
     <h1>徒步路线</h1>
-    <Button label="新建路线" icon="pi pi-plus" @click="openCreate" />
+    <div class="header-actions">
+      <Select
+        v-model="selectedRegion"
+        :options="regionOptions"
+        option-label="label"
+        option-value="value"
+        placeholder="选择地区"
+        class="region-filter"
+        @change="onRegionChange"
+      />
+      <Button label="新建路线" icon="pi pi-plus" @click="openCreate" />
+    </div>
   </div>
 
   <DataTable
@@ -140,6 +172,11 @@ onMounted(loadRoutes)
     <Column field="difficulty" header="难度" style="width: 8rem">
       <template #body="{ data }">
         <Tag :value="data.difficulty" :severity="getSeverity(data.difficulty)" />
+      </template>
+    </Column>
+    <Column field="region" header="地区" style="width: 8rem">
+      <template #body="{ data }">
+        <Tag :value="data.region" severity="info" icon="pi pi-map-marker" />
       </template>
     </Column>
     <Column header="操作" style="width: 12rem">
@@ -177,6 +214,10 @@ onMounted(loadRoutes)
         class="w-full"
       />
     </div>
+    <div class="form-field">
+      <label for="route-region">地区</label>
+      <InputText id="route-region" v-model="form.region" class="w-full" placeholder="如：云南" />
+    </div>
     <template #footer>
       <Button label="取消" text @click="dialogVisible = false" />
       <Button label="保存" icon="pi pi-check" @click="saveRoute" />
@@ -195,6 +236,16 @@ onMounted(loadRoutes)
 .page-header h1 {
   font-size: 1.5rem;
   font-weight: 700;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.region-filter {
+  width: 10rem;
 }
 
 .route-link {

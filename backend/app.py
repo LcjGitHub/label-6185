@@ -19,13 +19,33 @@ def row_to_dict(row):
 
 @app.get("/api/routes")
 def list_routes():
-    """获取全部路线列表。"""
+    """获取全部路线列表，支持按地区筛选。"""
+    region = request.args.get("region", "").strip()
+    conn = get_connection()
+    try:
+        if region:
+            rows = conn.execute(
+                "SELECT id, name, difficulty, region FROM routes WHERE region = ? ORDER BY id",
+                (region,),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT id, name, difficulty, region FROM routes ORDER BY id"
+            ).fetchall()
+        return jsonify([row_to_dict(r) for r in rows])
+    finally:
+        conn.close()
+
+
+@app.get("/api/routes/regions")
+def list_regions():
+    """获取所有地区列表（去重）。"""
     conn = get_connection()
     try:
         rows = conn.execute(
-            "SELECT id, name, difficulty FROM routes ORDER BY id"
+            "SELECT DISTINCT region FROM routes WHERE region IS NOT NULL AND region != '' ORDER BY region"
         ).fetchall()
-        return jsonify([row_to_dict(r) for r in rows])
+        return jsonify([row["region"] for row in rows])
     finally:
         conn.close()
 
@@ -36,7 +56,7 @@ def get_route(route_id):
     conn = get_connection()
     try:
         row = conn.execute(
-            "SELECT id, name, difficulty FROM routes WHERE id = ?", (route_id,)
+            "SELECT id, name, difficulty, region FROM routes WHERE id = ?", (route_id,)
         ).fetchone()
         if not row:
             return jsonify({"error": "路线不存在"}), 404
@@ -51,17 +71,18 @@ def create_route():
     data = request.get_json(silent=True) or {}
     name = (data.get("name") or "").strip()
     difficulty = (data.get("difficulty") or "").strip()
-    if not name or not difficulty:
-        return jsonify({"error": "名称和难度不能为空"}), 400
+    region = (data.get("region") or "").strip()
+    if not name or not difficulty or not region:
+        return jsonify({"error": "名称、难度和地区不能为空"}), 400
     conn = get_connection()
     try:
         cur = conn.execute(
-            "INSERT INTO routes (name, difficulty) VALUES (?, ?)",
-            (name, difficulty),
+            "INSERT INTO routes (name, difficulty, region) VALUES (?, ?, ?)",
+            (name, difficulty, region),
         )
         conn.commit()
         row = conn.execute(
-            "SELECT id, name, difficulty FROM routes WHERE id = ?",
+            "SELECT id, name, difficulty, region FROM routes WHERE id = ?",
             (cur.lastrowid,),
         ).fetchone()
         return jsonify(row_to_dict(row)), 201
@@ -75,19 +96,20 @@ def update_route(route_id):
     data = request.get_json(silent=True) or {}
     name = (data.get("name") or "").strip()
     difficulty = (data.get("difficulty") or "").strip()
-    if not name or not difficulty:
-        return jsonify({"error": "名称和难度不能为空"}), 400
+    region = (data.get("region") or "").strip()
+    if not name or not difficulty or not region:
+        return jsonify({"error": "名称、难度和地区不能为空"}), 400
     conn = get_connection()
     try:
         cur = conn.execute(
-            "UPDATE routes SET name = ?, difficulty = ? WHERE id = ?",
-            (name, difficulty, route_id),
+            "UPDATE routes SET name = ?, difficulty = ?, region = ? WHERE id = ?",
+            (name, difficulty, region, route_id),
         )
         conn.commit()
         if cur.rowcount == 0:
             return jsonify({"error": "路线不存在"}), 404
         row = conn.execute(
-            "SELECT id, name, difficulty FROM routes WHERE id = ?", (route_id,)
+            "SELECT id, name, difficulty, region FROM routes WHERE id = ?", (route_id,)
         ).fetchone()
         return jsonify(row_to_dict(row))
     finally:

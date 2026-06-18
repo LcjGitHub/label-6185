@@ -25,7 +25,8 @@ def init_db() -> None:
             CREATE TABLE IF NOT EXISTS routes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
-                difficulty TEXT NOT NULL
+                difficulty TEXT NOT NULL,
+                region TEXT NOT NULL
             );
 
             CREATE TABLE IF NOT EXISTS markers (
@@ -49,13 +50,13 @@ def init_db() -> None:
 def _seed_data(conn: sqlite3.Connection) -> None:
     """写入 2 条路线、各 3 个标记点。"""
     routes = [
-        ("雨崩冰湖线", "困难"),
-        ("格聂C线", "极难"),
+        ("雨崩冰湖线", "困难", "云南"),
+        ("格聂C线", "极难", "四川"),
     ]
-    for name, difficulty in routes:
+    for name, difficulty, region in routes:
         cur = conn.execute(
-            "INSERT INTO routes (name, difficulty) VALUES (?, ?)",
-            (name, difficulty),
+            "INSERT INTO routes (name, difficulty, region) VALUES (?, ?, ?)",
+            (name, difficulty, region),
         )
         route_id = cur.lastrowid
         markers = [
