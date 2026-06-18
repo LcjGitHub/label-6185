@@ -30,12 +30,24 @@ const loadingRoute = ref(false)
 const loadingMarkers = ref(false)
 const dialogVisible = ref(false)
 const editingMarker = ref(null)
-const form = ref({ type: '水源', coordinates: '', notes: '' })
+const form = ref({ type: '水源', coordinates: '', notes: '', reliability: '中' })
 
 const typeOptions = [
   { label: '水源', value: '水源' },
   { label: '休息', value: '休息' },
 ]
+
+const reliabilityOptions = [
+  { label: '高', value: '高' },
+  { label: '中', value: '中' },
+  { label: '低', value: '低' },
+]
+
+const reliabilitySeverity = {
+  高: 'success',
+  中: 'warn',
+  低: 'danger',
+}
 
 const difficultySeverity = {
   简单: 'success',
@@ -69,7 +81,7 @@ async function loadMarkers() {
 
 function openCreate() {
   editingMarker.value = null
-  form.value = { type: '水源', coordinates: '', notes: '' }
+  form.value = { type: '水源', coordinates: '', notes: '', reliability: '中' }
   dialogVisible.value = true
 }
 
@@ -80,6 +92,7 @@ function openEdit(marker) {
     type: marker.type,
     coordinates: marker.coordinates,
     notes: marker.notes || '',
+    reliability: marker.reliability || '',
   }
   dialogVisible.value = true
 }
@@ -89,12 +102,16 @@ async function saveMarker() {
     toast.add({ severity: 'warn', summary: '请填写坐标', life: 2500 })
     return
   }
+  const payload = { ...form.value }
+  if (payload.type !== '水源') {
+    payload.reliability = null
+  }
   try {
     if (editingMarker.value) {
-      await markerApi.update(editingMarker.value.id, form.value)
+      await markerApi.update(editingMarker.value.id, payload)
       toast.add({ severity: 'success', summary: '标记已更新', life: 2000 })
     } else {
-      await markerApi.create(routeId.value, form.value)
+      await markerApi.create(routeId.value, payload)
       toast.add({ severity: 'success', summary: '标记已创建', life: 2000 })
     }
     dialogVisible.value = false
@@ -172,6 +189,16 @@ onMounted(async () => {
         <code class="coords">{{ data.coordinates }}</code>
       </template>
     </Column>
+    <Column field="reliability" header="可靠性" style="width: 6rem">
+      <template #body="{ data }">
+        <Tag
+          v-if="data.reliability"
+          :value="data.reliability"
+          :severity="reliabilitySeverity[data.reliability]"
+        />
+        <span v-else class="notes">—</span>
+      </template>
+    </Column>
     <Column field="notes" header="备注">
       <template #body="{ data }">
         <span class="notes">{{ data.notes || '—' }}</span>
@@ -202,6 +229,17 @@ onMounted(async () => {
         id="marker-type"
         v-model="form.type"
         :options="typeOptions"
+        option-label="label"
+        option-value="value"
+        class="w-full"
+      />
+    </div>
+    <div v-if="form.type === '水源'" class="form-field">
+      <label for="marker-reliability">可靠性</label>
+      <Select
+        id="marker-reliability"
+        v-model="form.reliability"
+        :options="reliabilityOptions"
         option-label="label"
         option-value="value"
         class="w-full"

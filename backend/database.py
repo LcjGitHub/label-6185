@@ -37,12 +37,14 @@ def init_db() -> None:
                 marker_type TEXT NOT NULL CHECK (marker_type IN ('水源', '休息')),
                 coordinates TEXT NOT NULL,
                 notes TEXT DEFAULT '',
+                reliability TEXT CHECK (reliability IN ('高', '中', '低')),
                 FOREIGN KEY (route_id) REFERENCES routes(id) ON DELETE CASCADE
             );
             """
         )
         _migrate_routes_region(conn)
         _migrate_routes_mileage_days(conn)
+        _migrate_markers_reliability(conn)
         count = conn.execute("SELECT COUNT(*) FROM routes").fetchone()[0]
         if count == 0:
             _seed_data(conn)
@@ -81,6 +83,16 @@ def _migrate_routes_mileage_days(conn: sqlite3.Connection) -> None:
         )
 
 
+def _migrate_markers_reliability(conn: sqlite3.Connection) -> None:
+    """升级旧数据库：检测 markers 表是否缺少 reliability 字段，缺少则追加。"""
+    columns = [row["name"] for row in conn.execute("PRAGMA table_info(markers)").fetchall()]
+    if "reliability" in columns:
+        return
+    conn.execute(
+        "ALTER TABLE markers ADD COLUMN reliability TEXT CHECK (reliability IN ('高', '中', '低'))"
+    )
+
+
 def _seed_data(conn: sqlite3.Connection) -> None:
     """写入 2 条路线、各 3 个标记点。"""
     routes = [
@@ -94,17 +106,17 @@ def _seed_data(conn: sqlite3.Connection) -> None:
         )
         route_id = cur.lastrowid
         markers = [
-            ("水源", "N28.4123 E98.7891", "溪流清澈，可直饮"),
-            ("休息", "N28.4156 E98.7920", "平坦草地，可扎营"),
-            ("水源", "N28.4189 E98.7955", "山涧泉水，需煮沸"),
+            ("水源", "N28.4123 E98.7891", "溪流清澈，可直饮", "高"),
+            ("休息", "N28.4156 E98.7920", "平坦草地，可扎营", None),
+            ("水源", "N28.4189 E98.7955", "山涧泉水，需煮沸", "中"),
         ]
         if route_id == 2:
             markers = [
-                ("水源", "N29.8234 E99.1234", "冰川融水，夏季充沛"),
-                ("休息", "N29.8267 E99.1267", "避风石滩"),
-                ("水源", "N29.8301 E99.1302", "季节性水源，旱季干涸"),
+                ("水源", "N29.8234 E99.1234", "冰川融水，夏季充沛", "高"),
+                ("休息", "N29.8267 E99.1267", "避风石滩", None),
+                ("水源", "N29.8301 E99.1302", "季节性水源，旱季干涸", "低"),
             ]
         conn.executemany(
-            "INSERT INTO markers (route_id, marker_type, coordinates, notes) VALUES (?, ?, ?, ?)",
-            [(route_id, t, c, n) for t, c, n in markers],
+            "INSERT INTO markers (route_id, marker_type, coordinates, notes, reliability) VALUES (?, ?, ?, ?, ?)",
+            [(route_id, t, c, n, r) for t, c, n, r in markers],
         )

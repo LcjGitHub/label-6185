@@ -6,7 +6,7 @@ const api = axios.create({
 })
 
 /** @typedef {{ id: number, name: string, difficulty: string, region: string, mileage: number, days: number }} Route */
-/** @typedef {{ id: number, route_id: number, type: '水源' | '休息', coordinates: string, notes: string }} Marker */
+/** @typedef {{ id: number, route_id: number, type: '水源' | '休息', coordinates: string, notes: string, reliability?: '高' | '中' | '低' | null }} Marker */
 
 export const routeApi = {
   /** @param {string} [region] @returns {Promise<Route[]>} */
@@ -26,9 +26,9 @@ export const routeApi = {
 export const markerApi = {
   /** @param {number} routeId @returns {Promise<Marker[]>} */
   list: (routeId) => api.get(`/routes/${routeId}/markers`).then((r) => r.data),
-  /** @param {number} routeId @param {{ type: string, coordinates: string, notes?: string }} data @returns {Promise<Marker>} */
+  /** @param {number} routeId @param {{ type: string, coordinates: string, notes?: string, reliability?: string | null }} data @returns {Promise<Marker>} */
   create: (routeId, data) => api.post(`/routes/${routeId}/markers`, data).then((r) => r.data),
-  /** @param {number} id @param {{ type: string, coordinates: string, notes?: string }} data @returns {Promise<Marker>} */
+  /** @param {number} id @param {{ type: string, coordinates: string, notes?: string, reliability?: string | null }} data @returns {Promise<Marker>} */
   update: (id, data) => api.put(`/markers/${id}`, data).then((r) => r.data),
   /** @param {number} id */
   remove: (id) => api.delete(`/markers/${id}`),

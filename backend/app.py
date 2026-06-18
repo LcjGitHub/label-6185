@@ -14,6 +14,20 @@ def row_to_dict(row):
     return dict(row) if row else None
 
 
+VALID_RELIABILITIES = ("高", "中", "低")
+
+
+def validate_reliability(reliability, marker_type):
+    """校验可靠性字段：水源类型必须为高/中/低，休息类型必须为空。"""
+    if marker_type == "水源":
+        if reliability not in VALID_RELIABILITIES:
+            return "水源类型必须指定可靠性（高/中/低）"
+    else:
+        if reliability is not None and reliability != "":
+            return "休息类型无需指定可靠性"
+    return None
+
+
 # ── 路线 CRUD ──────────────────────────────────────────────
 
 
@@ -162,7 +176,7 @@ def list_markers(route_id):
         if not route:
             return jsonify({"error": "路线不存在"}), 404
         rows = conn.execute(
-            """SELECT id, route_id, marker_type AS type, coordinates, notes
+            """SELECT id, route_id, marker_type AS type, coordinates, notes, reliability
                FROM markers WHERE route_id = ? ORDER BY id""",
             (route_id,),
         ).fetchall()
@@ -178,10 +192,16 @@ def create_marker(route_id):
     marker_type = (data.get("type") or "").strip()
     coordinates = (data.get("coordinates") or "").strip()
     notes = (data.get("notes") or "").strip()
+    reliability = data.get("reliability")
+    if reliability is not None:
+        reliability = reliability.strip() or None
     if marker_type not in ("水源", "休息"):
         return jsonify({"error": "类型必须为「水源」或「休息」"}), 400
     if not coordinates:
         return jsonify({"error": "坐标不能为空"}), 400
+    rel_err = validate_reliability(reliability, marker_type)
+    if rel_err:
+        return jsonify({"error": rel_err}), 400
     conn = get_connection()
     try:
         route = conn.execute(
@@ -190,13 +210,13 @@ def create_marker(route_id):
         if not route:
             return jsonify({"error": "路线不存在"}), 404
         cur = conn.execute(
-            """INSERT INTO markers (route_id, marker_type, coordinates, notes)
-               VALUES (?, ?, ?, ?)""",
-            (route_id, marker_type, coordinates, notes),
+            """INSERT INTO markers (route_id, marker_type, coordinates, notes, reliability)
+               VALUES (?, ?, ?, ?, ?)""",
+            (route_id, marker_type, coordinates, notes, reliability),
         )
         conn.commit()
         row = conn.execute(
-            """SELECT id, route_id, marker_type AS type, coordinates, notes
+            """SELECT id, route_id, marker_type AS type, coordinates, notes, reliability
                FROM markers WHERE id = ?""",
             (cur.lastrowid,),
         ).fetchone()
@@ -212,22 +232,28 @@ def update_marker(marker_id):
     marker_type = (data.get("type") or "").strip()
     coordinates = (data.get("coordinates") or "").strip()
     notes = (data.get("notes") or "").strip()
+    reliability = data.get("reliability")
+    if reliability is not None:
+        reliability = reliability.strip() or None
     if marker_type not in ("水源", "休息"):
         return jsonify({"error": "类型必须为「水源」或「休息」"}), 400
     if not coordinates:
         return jsonify({"error": "坐标不能为空"}), 400
+    rel_err = validate_reliability(reliability, marker_type)
+    if rel_err:
+        return jsonify({"error": rel_err}), 400
     conn = get_connection()
     try:
         cur = conn.execute(
-            """UPDATE markers SET marker_type = ?, coordinates = ?, notes = ?
+            """UPDATE markers SET marker_type = ?, coordinates = ?, notes = ?, reliability = ?
                WHERE id = ?""",
-            (marker_type, coordinates, notes, marker_id),
+            (marker_type, coordinates, notes, reliability, marker_id),
         )
         conn.commit()
         if cur.rowcount == 0:
             return jsonify({"error": "标记点不存在"}), 404
         row = conn.execute(
-            """SELECT id, route_id, marker_type AS type, coordinates, notes
+            """SELECT id, route_id, marker_type AS type, coordinates, notes, reliability
                FROM markers WHERE id = ?""",
             (marker_id,),
         ).fetchone()
