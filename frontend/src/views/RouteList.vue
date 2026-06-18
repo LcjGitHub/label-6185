@@ -30,7 +30,8 @@ const editingRoute = ref(null)
 const form = ref({ name: '', difficulty: '', region: '', mileage: 0, days: 0 })
 const selectedRegion = ref('')
 const selectedDifficulty = ref('')
-const searchName = ref('')
+const searchNameInput = ref('')
+const activeSearchName = ref('')
 const regionOptions = ref([])
 const difficultyFilterOptions = ref([])
 
@@ -58,7 +59,7 @@ async function loadRoutes() {
   loading.value = true
   try {
     const params = {}
-    if (searchName.value.trim()) params.name = searchName.value.trim()
+    if (activeSearchName.value) params.name = activeSearchName.value
     if (selectedRegion.value) params.region = selectedRegion.value
     if (selectedDifficulty.value) params.difficulty = selectedDifficulty.value
     routes.value = await routeApi.list(params)
@@ -116,16 +117,19 @@ async function onDifficultyChange() {
 async function resetFilters() {
   selectedRegion.value = ''
   selectedDifficulty.value = ''
-  searchName.value = ''
+  searchNameInput.value = ''
+  activeSearchName.value = ''
   await loadRoutes()
 }
 
 async function searchByName() {
+  activeSearchName.value = searchNameInput.value.trim()
   await loadRoutes()
 }
 
 function clearSearch() {
-  searchName.value = ''
+  searchNameInput.value = ''
+  activeSearchName.value = ''
   loadRoutes()
 }
 
@@ -214,7 +218,7 @@ onActivated(() => {
       <IconField class="search-field">
         <InputIcon class="pi pi-search" />
         <InputText
-          v-model="searchName"
+          v-model="searchNameInput"
           placeholder="搜索路线名称"
           class="search-input"
           @keyup.enter="searchByName"
@@ -222,7 +226,7 @@ onActivated(() => {
       </IconField>
       <Button label="查询" icon="pi pi-search" @click="searchByName" />
       <Button
-        v-if="searchName"
+        v-if="activeSearchName || searchNameInput"
         label="清空"
         icon="pi pi-times"
         text
@@ -317,7 +321,9 @@ onActivated(() => {
       </template>
     </Column>
     <template #empty>
-      <div class="empty">暂无路线，点击「新建路线」添加</div>
+      <div class="empty">
+        {{ activeSearchName ? '未找到匹配的路线' : '暂无路线，点击「新建路线」添加' }}
+      </div>
     </template>
   </DataTable>
 
