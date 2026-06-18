@@ -10,8 +10,8 @@ const api = axios.create({
 /** @typedef {{ id: number, route_id: number, name: string, is_required: number }} Equipment */
 
 export const routeApi = {
-  /** @param {string} [region] @param {string} [difficulty] @returns {Promise<Route[]>} */
-  list: (region, difficulty) => api.get('/routes', { params: { region, difficulty } }).then((r) => r.data),
+  /** @param {{ name?: string, region?: string, difficulty?: string }} params @returns {Promise<Route[]>} */
+  list: (params = {}) => api.get('/routes', { params }).then((r) => r.data),
   /** @returns {Promise<string[]>} */
   regions: () => api.get('/routes/regions').then((r) => r.data),
   /** @returns {Promise<string[]>} */

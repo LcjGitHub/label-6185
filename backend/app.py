@@ -52,13 +52,17 @@ def get_stats():
 
 @app.get("/api/routes")
 def list_routes():
-    """获取全部路线列表，支持按地区和难度筛选。"""
+    """获取全部路线列表，支持按名称关键词、地区和难度筛选。"""
+    name = request.args.get("name", "").strip()
     region = request.args.get("region", "").strip()
     difficulty = request.args.get("difficulty", "").strip()
     conn = get_connection()
     try:
         conditions = []
         params = []
+        if name:
+            conditions.append("r.name LIKE ?")
+            params.append(f"%{name}%")
         if region:
             conditions.append("region = ?")
             params.append(region)

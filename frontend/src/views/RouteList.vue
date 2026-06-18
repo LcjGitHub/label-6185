@@ -9,6 +9,8 @@ import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
+import IconField from 'primevue/iconfield'
+import InputIcon from 'primevue/inputicon'
 import Select from 'primevue/select'
 import Tag from 'primevue/tag'
 import Toast from 'primevue/toast'
@@ -28,6 +30,7 @@ const editingRoute = ref(null)
 const form = ref({ name: '', difficulty: '', region: '', mileage: 0, days: 0 })
 const selectedRegion = ref('')
 const selectedDifficulty = ref('')
+const searchName = ref('')
 const regionOptions = ref([])
 const difficultyFilterOptions = ref([])
 
@@ -54,10 +57,11 @@ function getSeverity(difficulty) {
 async function loadRoutes() {
   loading.value = true
   try {
-    routes.value = await routeApi.list(
-      selectedRegion.value || undefined,
-      selectedDifficulty.value || undefined,
-    )
+    const params = {}
+    if (searchName.value.trim()) params.name = searchName.value.trim()
+    if (selectedRegion.value) params.region = selectedRegion.value
+    if (selectedDifficulty.value) params.difficulty = selectedDifficulty.value
+    routes.value = await routeApi.list(params)
   } catch {
     toast.add({ severity: 'error', summary: '加载失败', detail: '无法获取路线列表', life: 3000 })
   } finally {
@@ -112,7 +116,17 @@ async function onDifficultyChange() {
 async function resetFilters() {
   selectedRegion.value = ''
   selectedDifficulty.value = ''
+  searchName.value = ''
   await loadRoutes()
+}
+
+async function searchByName() {
+  await loadRoutes()
+}
+
+function clearSearch() {
+  searchName.value = ''
+  loadRoutes()
 }
 
 function openCreate() {
@@ -197,6 +211,23 @@ onActivated(() => {
   <div class="page-header">
     <h1>徒步路线</h1>
     <div class="header-actions">
+      <IconField class="search-field">
+        <InputIcon class="pi pi-search" />
+        <InputText
+          v-model="searchName"
+          placeholder="搜索路线名称"
+          class="search-input"
+          @keyup.enter="searchByName"
+        />
+      </IconField>
+      <Button label="查询" icon="pi pi-search" @click="searchByName" />
+      <Button
+        v-if="searchName"
+        label="清空"
+        icon="pi pi-times"
+        text
+        @click="clearSearch"
+      />
       <Select
         v-model="selectedRegion"
         :options="regionOptions"
@@ -388,6 +419,16 @@ onActivated(() => {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.search-field {
+  position: relative;
+}
+
+.search-input {
+  padding-left: 2.25rem;
+  width: 14rem;
 }
 
 .filter-select {
