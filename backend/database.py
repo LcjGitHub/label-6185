@@ -53,6 +53,7 @@ def init_db() -> None:
         _migrate_routes_region(conn)
         _migrate_routes_mileage_days(conn)
         _migrate_markers_reliability(conn)
+        _migrate_equipment_seed(conn)
         count = conn.execute("SELECT COUNT(*) FROM routes").fetchone()[0]
         if count == 0:
             _seed_data(conn)
@@ -127,6 +128,32 @@ def _migrate_markers_reliability(conn: sqlite3.Connection) -> None:
           AND route_id IN (SELECT id FROM routes WHERE name LIKE '%格聂%')
         """
     )
+
+
+def _migrate_equipment_seed(conn: sqlite3.Connection) -> None:
+    """升级旧数据库：若装备表为空但已有路线，则按路线名称回填种子装备。"""
+    eq_count = conn.execute("SELECT COUNT(*) FROM equipment").fetchone()[0]
+    route_count = conn.execute("SELECT COUNT(*) FROM routes").fetchone()[0]
+    if eq_count > 0 or route_count == 0:
+        return
+
+    equipment_map = {
+        "雨崩冰湖": [("高帮登山鞋", 1), ("冲锋衣裤", 1), ("登山杖", 0)],
+        "格聂": [("羽绒服", 1), ("冰爪冰镐", 1), ("头灯", 0)],
+    }
+
+    routes = conn.execute("SELECT id, name FROM routes").fetchall()
+    for route in routes:
+        matched = None
+        for keyword, items in equipment_map.items():
+            if keyword in route["name"]:
+                matched = items
+                break
+        if matched:
+            conn.executemany(
+                "INSERT INTO equipment (route_id, name, is_required) VALUES (?, ?, ?)",
+                [(route["id"], name, is_req) for name, is_req in matched],
+            )
 
 
 def _seed_data(conn: sqlite3.Connection) -> None:

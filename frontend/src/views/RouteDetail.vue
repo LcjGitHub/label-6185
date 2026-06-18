@@ -194,8 +194,9 @@ function confirmDeleteEquipment(item) {
         await equipmentApi.remove(item.id)
         toast.add({ severity: 'success', summary: '已删除', life: 2000 })
         await loadEquipment()
-      } catch {
-        toast.add({ severity: 'error', summary: '删除失败', life: 3000 })
+      } catch (err) {
+        const detail = err?.response?.data?.error || '请稍后重试'
+        toast.add({ severity: 'error', summary: '删除失败', detail, life: 3000 })
       }
     },
   })
@@ -213,7 +214,7 @@ onMounted(async () => {
   <ConfirmDialog />
 
   <div class="breadcrumb">
-    <Button label="返回列表" icon="pi pi-arrow-left" text @click="router.push('/')" />
+    <Button label="返回列表" icon="pi pi-arrow-left" text @click="router.push('/routes')" />
   </div>
 
   <div v-if="route" class="route-info">
