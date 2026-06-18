@@ -67,7 +67,9 @@ def list_routes():
             params.append(difficulty)
         where = (" WHERE " + " AND ".join(conditions)) if conditions else ""
         rows = conn.execute(
-            f"SELECT id, name, difficulty, region, mileage, days FROM routes{where} ORDER BY id",
+            f"""SELECT r.id, r.name, r.difficulty, r.region, r.mileage, r.days,
+                       (SELECT COUNT(*) FROM markers WHERE route_id = r.id) AS marker_count
+                FROM routes r{where} ORDER BY r.id""",
             params,
         ).fetchall()
         return jsonify([row_to_dict(r) for r in rows])

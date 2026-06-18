@@ -261,6 +261,11 @@ onMounted(async () => {
         <span class="mileage-text">{{ data.mileage ?? 0 }} 公里</span>
       </template>
     </Column>
+    <Column field="marker_count" header="标记点数量" style="width: 8rem">
+      <template #body="{ data }">
+        <span class="marker-count-text">{{ data.marker_count ?? 0 }} 个</span>
+      </template>
+    </Column>
     <Column field="days" header="徒步天数" style="width: 8rem">
       <template #body="{ data }">
         <span class="days-text">{{ data.days ?? 0 }} 天</span>
@@ -423,6 +428,7 @@ onMounted(async () => {
 }
 
 .mileage-text,
+.marker-count-text,
 .days-text {
   font-weight: 500;
   color: #475569;

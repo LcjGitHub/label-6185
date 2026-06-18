@@ -5,7 +5,7 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
-/** @typedef {{ id: number, name: string, difficulty: string, region: string, mileage: number, days: number }} Route */
+/** @typedef {{ id: number, name: string, difficulty: string, region: string, mileage: number, days: number, marker_count: number }} Route */
 /** @typedef {{ id: number, route_id: number, type: '水源' | '休息', coordinates: string, notes: string, reliability?: '高' | '中' | '低' | null }} Marker */
 /** @typedef {{ id: number, route_id: number, name: string, is_required: number }} Equipment */
 
