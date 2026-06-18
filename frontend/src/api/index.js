@@ -26,6 +26,8 @@ export const routeApi = {
   remove: (id) => api.delete(`/routes/${id}`),
   /** @param {number} id @returns {Promise<Route>} */
   clone: (id) => api.post(`/routes/${id}/clone`).then((r) => r.data),
+  /** @param {number} id @returns {Promise<string>} */
+  export: (id) => api.get(`/routes/${id}/export`, { responseType: 'text' }).then((r) => r.data),
 }
 
 export const statsApi = {

@@ -1,6 +1,6 @@
 """冷门徒步路线水源标记 — Flask API 服务。"""
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, Response
 from flask_cors import CORS
 
 from database import init_db, get_connection
@@ -368,6 +368,56 @@ def delete_marker(marker_id):
         if cur.rowcount == 0:
             return jsonify({"error": "标记点不存在"}), 404
         return "", 204
+    finally:
+        conn.close()
+
+
+@app.get("/api/routes/<int:route_id>/export")
+def export_route(route_id):
+    """导出路线及全部标记点为纯文本。"""
+    conn = get_connection()
+    try:
+        route = conn.execute(
+            "SELECT id, name, region, mileage, days FROM routes WHERE id = ?",
+            (route_id,),
+        ).fetchone()
+        if not route:
+            return jsonify({"error": "路线不存在"}), 404
+
+        markers = conn.execute(
+            """SELECT marker_type AS type, coordinates, reliability, notes
+               FROM markers WHERE route_id = ? ORDER BY id""",
+            (route_id,),
+        ).fetchall()
+
+        lines = []
+        lines.append(f"路线名称：{route['name']}")
+        lines.append(f"地区：{route['region']}")
+        lines.append(f"里程：{route['mileage']} 公里")
+        lines.append(f"天数：{route['days']} 天")
+        lines.append("")
+        lines.append("── 标记点列表 ──")
+
+        if not markers:
+            lines.append("（暂无标记点）")
+        else:
+            for idx, m in enumerate(markers, 1):
+                lines.append(f"#{idx} 类型：{m['type']}")
+                lines.append(f"   坐标：{m['coordinates']}")
+                if m["reliability"]:
+                    lines.append(f"   可靠性：{m['reliability']}")
+                if m["notes"]:
+                    lines.append(f"   备注：{m['notes']}")
+                lines.append("")
+
+        text = "\n".join(lines)
+        return Response(
+            text,
+            mimetype="text/plain; charset=utf-8",
+            headers={
+                "Content-Disposition": f"attachment; filename=\"{route['name']}.txt\""
+            },
+        )
     finally:
         conn.close()
 

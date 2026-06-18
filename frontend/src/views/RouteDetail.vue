@@ -177,6 +177,25 @@ function confirmDelete(marker) {
   })
 }
 
+async function exportRoute() {
+  if (!route.value) return
+  try {
+    const text = await routeApi.export(routeId.value)
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${route.value.name}.txt`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    toast.add({ severity: 'success', summary: '导出成功', life: 2000 })
+  } catch {
+    toast.add({ severity: 'error', summary: '导出失败', life: 3000 })
+  }
+}
+
 async function loadEquipment() {
   loadingEquipment.value = true
   try {
@@ -261,7 +280,10 @@ watch(routeId, async () => {
 
   <div class="section-header">
     <h2>标记点</h2>
-    <Button label="添加标记" icon="pi pi-map-marker" size="small" @click="openCreate" />
+    <div class="header-actions">
+      <Button label="导出文本" icon="pi pi-download" size="small" severity="success" outlined @click="exportRoute" />
+      <Button label="添加标记" icon="pi pi-map-marker" size="small" @click="openCreate" />
+    </div>
   </div>
 
   <div class="filter-bar">
@@ -475,6 +497,11 @@ watch(routeId, async () => {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 0.75rem;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
 }
 
 .section-header h2 {
