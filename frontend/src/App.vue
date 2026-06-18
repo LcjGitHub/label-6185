@@ -5,6 +5,16 @@
         <i class="pi pi-map" />
         <span>冷门徒步路线水源标记</span>
       </router-link>
+      <nav class="nav">
+        <router-link to="/" class="nav-link" :class="{ active: $route.path === '/' }">
+          <i class="pi pi-chart-bar" />
+          <span>概览</span>
+        </router-link>
+        <router-link to="/routes" class="nav-link" :class="{ active: $route.path.startsWith('/routes') }">
+          <i class="pi pi-directions" />
+          <span>路线</span>
+        </router-link>
+      </nav>
     </header>
     <main class="main">
       <router-view />
@@ -36,6 +46,9 @@ body {
   color: #fff;
   padding: 0.875rem 1.5rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .brand {
@@ -50,6 +63,35 @@ body {
 
 .brand:hover {
   opacity: 0.9;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 0.5rem;
+  color: rgba(255, 255, 255, 0.75);
+  text-decoration: none;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  transition: background 0.15s, color 0.15s;
+}
+
+.nav-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.nav-link.active {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
 }
 
 .main {

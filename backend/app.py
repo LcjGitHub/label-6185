@@ -28,6 +28,25 @@ def validate_reliability(reliability, marker_type):
     return None
 
 
+@app.get("/api/stats")
+def get_stats():
+    """返回路线总数、标记点总数、水源数量、休息点数量。"""
+    conn = get_connection()
+    try:
+        route_count = conn.execute("SELECT COUNT(*) FROM routes").fetchone()[0]
+        marker_count = conn.execute("SELECT COUNT(*) FROM markers").fetchone()[0]
+        water_count = conn.execute("SELECT COUNT(*) FROM markers WHERE marker_type = '水源'").fetchone()[0]
+        rest_count = conn.execute("SELECT COUNT(*) FROM markers WHERE marker_type = '休息'").fetchone()[0]
+        return jsonify({
+            "routeCount": route_count,
+            "markerCount": marker_count,
+            "waterCount": water_count,
+            "restCount": rest_count,
+        })
+    finally:
+        conn.close()
+
+
 # ── 路线 CRUD ──────────────────────────────────────────────
 
 

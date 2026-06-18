@@ -23,6 +23,10 @@ export const routeApi = {
   remove: (id) => api.delete(`/routes/${id}`),
 }
 
+export const statsApi = {
+  get: () => api.get('/stats').then((r) => r.data),
+}
+
 export const markerApi = {
   /** @param {number} routeId @returns {Promise<Marker[]>} */
   list: (routeId) => api.get(`/routes/${routeId}/markers`).then((r) => r.data),
