@@ -26,7 +26,9 @@ def init_db() -> None:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
                 difficulty TEXT NOT NULL,
-                region TEXT NOT NULL
+                region TEXT NOT NULL,
+                mileage REAL DEFAULT 0,
+                days REAL DEFAULT 0
             );
 
             CREATE TABLE IF NOT EXISTS markers (
@@ -40,6 +42,7 @@ def init_db() -> None:
             """
         )
         _migrate_routes_region(conn)
+        _migrate_routes_mileage_days(conn)
         count = conn.execute("SELECT COUNT(*) FROM routes").fetchone()[0]
         if count == 0:
             _seed_data(conn)
@@ -57,16 +60,25 @@ def _migrate_routes_region(conn: sqlite3.Connection) -> None:
     conn.execute("UPDATE routes SET region = '未指定' WHERE region IS NULL OR region = ''")
 
 
+def _migrate_routes_mileage_days(conn: sqlite3.Connection) -> None:
+    """升级旧数据库：检测 routes 表是否缺少 mileage/days 字段，缺少则追加并回填默认值。"""
+    columns = [row["name"] for row in conn.execute("PRAGMA table_info(routes)").fetchall()]
+    if "mileage" not in columns:
+        conn.execute("ALTER TABLE routes ADD COLUMN mileage REAL DEFAULT 0")
+    if "days" not in columns:
+        conn.execute("ALTER TABLE routes ADD COLUMN days REAL DEFAULT 0")
+
+
 def _seed_data(conn: sqlite3.Connection) -> None:
     """写入 2 条路线、各 3 个标记点。"""
     routes = [
-        ("雨崩冰湖线", "困难", "云南"),
-        ("格聂C线", "极难", "四川"),
+        ("雨崩冰湖线", "困难", "云南", 18.5, 2.0),
+        ("格聂C线", "极难", "四川", 52.0, 4.0),
     ]
-    for name, difficulty, region in routes:
+    for name, difficulty, region, mileage, days in routes:
         cur = conn.execute(
-            "INSERT INTO routes (name, difficulty, region) VALUES (?, ?, ?)",
-            (name, difficulty, region),
+            "INSERT INTO routes (name, difficulty, region, mileage, days) VALUES (?, ?, ?, ?, ?)",
+            (name, difficulty, region, mileage, days),
         )
         route_id = cur.lastrowid
         markers = [

@@ -8,6 +8,7 @@ import Column from 'primevue/column'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
+import InputNumber from 'primevue/inputnumber'
 import Select from 'primevue/select'
 import Tag from 'primevue/tag'
 import Toast from 'primevue/toast'
@@ -22,7 +23,7 @@ const routes = ref([])
 const loading = ref(false)
 const dialogVisible = ref(false)
 const editingRoute = ref(null)
-const form = ref({ name: '', difficulty: '', region: '' })
+const form = ref({ name: '', difficulty: '', region: '', mileage: 0, days: 0 })
 const selectedRegion = ref('')
 const regionOptions = ref([])
 
@@ -75,14 +76,20 @@ async function onRegionChange() {
 
 function openCreate() {
   editingRoute.value = null
-  form.value = { name: '', difficulty: '中等', region: '' }
+  form.value = { name: '', difficulty: '中等', region: '', mileage: 0, days: 0 }
   dialogVisible.value = true
 }
 
 /** @param {import('../api').Route} route */
 function openEdit(route) {
   editingRoute.value = route
-  form.value = { name: route.name, difficulty: route.difficulty, region: route.region }
+  form.value = {
+    name: route.name,
+    difficulty: route.difficulty,
+    region: route.region,
+    mileage: route.mileage ?? 0,
+    days: route.days ?? 0,
+  }
   dialogVisible.value = true
 }
 
@@ -179,6 +186,16 @@ onMounted(async () => {
         <Tag :value="data.region" severity="info" icon="pi pi-map-marker" />
       </template>
     </Column>
+    <Column field="mileage" header="里程(km)" style="width: 8rem">
+      <template #body="{ data }">
+        <span class="mileage-text">{{ data.mileage ?? 0 }} km</span>
+      </template>
+    </Column>
+    <Column field="days" header="徒步天数" style="width: 8rem">
+      <template #body="{ data }">
+        <span class="days-text">{{ data.days ?? 0 }} 天</span>
+      </template>
+    </Column>
     <Column header="操作" style="width: 12rem">
       <template #body="{ data }">
         <div class="actions">
@@ -217,6 +234,14 @@ onMounted(async () => {
     <div class="form-field">
       <label for="route-region">地区</label>
       <InputText id="route-region" v-model="form.region" class="w-full" placeholder="如：云南" />
+    </div>
+    <div class="form-field">
+      <label for="route-mileage">里程(公里)</label>
+      <InputNumber id="route-mileage" v-model="form.mileage" :min="0" :min-fraction-digits="0" :max-fraction-digits="2" class="w-full" placeholder="如：18.5" />
+    </div>
+    <div class="form-field">
+      <label for="route-days">建议徒步天数</label>
+      <InputNumber id="route-days" v-model="form.days" :min="0" :min-fraction-digits="0" :max-fraction-digits="1" class="w-full" placeholder="如：2.5" />
     </div>
     <template #footer>
       <Button label="取消" text @click="dialogVisible = false" />
@@ -284,5 +309,11 @@ onMounted(async () => {
 
 .w-full {
   width: 100%;
+}
+
+.mileage-text,
+.days-text {
+  font-weight: 500;
+  color: #475569;
 }
 </style>

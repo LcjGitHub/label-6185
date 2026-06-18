@@ -5,7 +5,7 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
-/** @typedef {{ id: number, name: string, difficulty: string, region: string }} Route */
+/** @typedef {{ id: number, name: string, difficulty: string, region: string, mileage: number, days: number }} Route */
 /** @typedef {{ id: number, route_id: number, type: '水源' | '休息', coordinates: string, notes: string }} Marker */
 
 export const routeApi = {
@@ -15,9 +15,9 @@ export const routeApi = {
   regions: () => api.get('/routes/regions').then((r) => r.data),
   /** @param {number} id @returns {Promise<Route>} */
   get: (id) => api.get(`/routes/${id}`).then((r) => r.data),
-  /** @param {{ name: string, difficulty: string, region: string }} data @returns {Promise<Route>} */
+  /** @param {{ name: string, difficulty: string, region: string, mileage?: number, days?: number }} data @returns {Promise<Route>} */
   create: (data) => api.post('/routes', data).then((r) => r.data),
-  /** @param {number} id @param {{ name: string, difficulty: string, region: string }} data @returns {Promise<Route>} */
+  /** @param {number} id @param {{ name: string, difficulty: string, region: string, mileage?: number, days?: number }} data @returns {Promise<Route>} */
   update: (id, data) => api.put(`/routes/${id}`, data).then((r) => r.data),
   /** @param {number} id */
   remove: (id) => api.delete(`/routes/${id}`),
