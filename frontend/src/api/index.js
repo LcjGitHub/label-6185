@@ -7,6 +7,7 @@ const api = axios.create({
 
 /** @typedef {{ id: number, name: string, difficulty: string, region: string, mileage: number, days: number }} Route */
 /** @typedef {{ id: number, route_id: number, type: '水源' | '休息', coordinates: string, notes: string, reliability?: '高' | '中' | '低' | null }} Marker */
+/** @typedef {{ id: number, route_id: number, name: string, is_required: number }} Equipment */
 
 export const routeApi = {
   /** @param {string} [region] @returns {Promise<Route[]>} */
@@ -36,6 +37,15 @@ export const markerApi = {
   update: (id, data) => api.put(`/markers/${id}`, data).then((r) => r.data),
   /** @param {number} id */
   remove: (id) => api.delete(`/markers/${id}`),
+}
+
+export const equipmentApi = {
+  /** @param {number} routeId @returns {Promise<Equipment[]>} */
+  list: (routeId) => api.get(`/routes/${routeId}/equipment`).then((r) => r.data),
+  /** @param {number} routeId @param {{ name: string, isRequired: number }} data @returns {Promise<Equipment>} */
+  create: (routeId, data) => api.post(`/routes/${routeId}/equipment`, data).then((r) => r.data),
+  /** @param {number} id */
+  remove: (id) => api.delete(`/equipment/${id}`),
 }
 
 export default api

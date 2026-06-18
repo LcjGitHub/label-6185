@@ -40,6 +40,14 @@ def init_db() -> None:
                 reliability TEXT CHECK (reliability IN ('高', '中', '低')),
                 FOREIGN KEY (route_id) REFERENCES routes(id) ON DELETE CASCADE
             );
+
+            CREATE TABLE IF NOT EXISTS equipment (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                route_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                is_required INTEGER NOT NULL DEFAULT 0,
+                FOREIGN KEY (route_id) REFERENCES routes(id) ON DELETE CASCADE
+            );
             """
         )
         _migrate_routes_region(conn)
@@ -147,4 +155,20 @@ def _seed_data(conn: sqlite3.Connection) -> None:
         conn.executemany(
             "INSERT INTO markers (route_id, marker_type, coordinates, notes, reliability) VALUES (?, ?, ?, ?, ?)",
             [(route_id, t, c, n, r) for t, c, n, r in markers],
+        )
+        if route_id == 1:
+            equipment_list = [
+                ("高帮登山鞋", 1),
+                ("冲锋衣裤", 1),
+                ("登山杖", 0),
+            ]
+        else:
+            equipment_list = [
+                ("羽绒服", 1),
+                ("冰爪冰镐", 1),
+                ("头灯", 0),
+            ]
+        conn.executemany(
+            "INSERT INTO equipment (route_id, name, is_required) VALUES (?, ?, ?)",
+            [(route_id, name, is_req) for name, is_req in equipment_list],
         )

@@ -13,7 +13,7 @@ import Select from 'primevue/select'
 import Tag from 'primevue/tag'
 import Toast from 'primevue/toast'
 import ConfirmDialog from 'primevue/confirmdialog'
-import { routeApi, markerApi } from '../api'
+import { routeApi, markerApi, equipmentApi } from '../api'
 
 const props = defineProps({
   id: { type: [String, Number], required: true },
@@ -26,11 +26,15 @@ const confirm = useConfirm()
 const routeId = computed(() => Number(props.id))
 const route = ref(null)
 const markers = ref([])
+const equipment = ref([])
 const loadingRoute = ref(false)
 const loadingMarkers = ref(false)
+const loadingEquipment = ref(false)
 const dialogVisible = ref(false)
+const equipmentDialogVisible = ref(false)
 const editingMarker = ref(null)
 const form = ref({ type: '水源', coordinates: '', notes: '', reliability: '中' })
+const equipmentForm = ref({ name: '', isRequired: 1 })
 
 const typeOptions = [
   { label: '水源', value: '水源' },
@@ -41,6 +45,11 @@ const reliabilityOptions = [
   { label: '高', value: '高' },
   { label: '中', value: '中' },
   { label: '低', value: '低' },
+]
+
+const isRequiredOptions = [
+  { label: '必备', value: 1 },
+  { label: '选用', value: 0 },
 ]
 
 const reliabilitySeverity = {
@@ -141,9 +150,61 @@ function confirmDelete(marker) {
   })
 }
 
+async function loadEquipment() {
+  loadingEquipment.value = true
+  try {
+    equipment.value = await equipmentApi.list(routeId.value)
+  } catch {
+    toast.add({ severity: 'error', summary: '加载装备失败', life: 3000 })
+  } finally {
+    loadingEquipment.value = false
+  }
+}
+
+function openCreateEquipment() {
+  equipmentForm.value = { name: '', isRequired: 1 }
+  equipmentDialogVisible.value = true
+}
+
+async function saveEquipment() {
+  if (!equipmentForm.value.name.trim()) {
+    toast.add({ severity: 'warn', summary: '请填写装备名称', life: 2500 })
+    return
+  }
+  try {
+    await equipmentApi.create(routeId.value, { ...equipmentForm.value })
+    toast.add({ severity: 'success', summary: '装备已添加', life: 2000 })
+    equipmentDialogVisible.value = false
+    await loadEquipment()
+  } catch (err) {
+    const detail = err?.response?.data?.error || '请稍后重试'
+    toast.add({ severity: 'error', summary: '保存失败', detail, life: 3000 })
+  }
+}
+
+/** @param {import('../api').Equipment} item */
+function confirmDeleteEquipment(item) {
+  confirm.require({
+    message: `确定删除装备「${item.name}」？`,
+    header: '确认删除',
+    icon: 'pi pi-exclamation-triangle',
+    acceptClass: 'p-button-danger',
+    accept: async () => {
+      try {
+        await equipmentApi.remove(item.id)
+        toast.add({ severity: 'success', summary: '已删除', life: 2000 })
+        await loadEquipment()
+      } catch {
+        toast.add({ severity: 'error', summary: '删除失败', life: 3000 })
+      }
+    },
+  })
+}
+
 onMounted(async () => {
   await loadRoute()
   await loadMarkers()
+  await loadEquipment()
 })
 </script>
 
@@ -264,6 +325,77 @@ onMounted(async () => {
       <Button label="保存" icon="pi pi-check" @click="saveMarker" />
     </template>
   </Dialog>
+
+  <div class="section-header">
+    <h2>装备清单</h2>
+    <Button label="添加装备" icon="pi pi-plus" size="small" @click="openCreateEquipment" />
+  </div>
+
+  <DataTable
+    :value="equipment"
+    :loading="loadingEquipment"
+    striped-rows
+    row-hover
+    data-key="id"
+    class="equipment-table"
+  >
+    <Column field="name" header="装备名称">
+      <template #body="{ data }">
+        <span>{{ data.name }}</span>
+      </template>
+    </Column>
+    <Column field="is_required" header="是否必备" style="width: 6rem">
+      <template #body="{ data }">
+        <Tag
+          :value="data.is_required ? '必备' : '选用'"
+          :severity="data.is_required ? 'danger' : 'info'"
+          :icon="data.is_required ? 'pi pi-exclamation-circle' : 'pi pi-th-large'"
+        />
+      </template>
+    </Column>
+    <Column header="操作" style="width: 6rem">
+      <template #body="{ data }">
+        <div class="actions">
+          <Button icon="pi pi-trash" text rounded severity="danger" @click="confirmDeleteEquipment(data)" />
+        </div>
+      </template>
+    </Column>
+    <template #empty>
+      <div class="empty">暂无装备</div>
+    </template>
+  </DataTable>
+
+  <Dialog
+    v-model:visible="equipmentDialogVisible"
+    header="添加装备"
+    modal
+    style="width: 26rem"
+  >
+    <div class="form-field">
+      <label for="equipment-name">装备名称</label>
+      <InputText
+        id="equipment-name"
+        v-model="equipmentForm.name"
+        class="w-full"
+        placeholder="如：登山鞋"
+      />
+    </div>
+    <div class="form-field">
+      <label for="equipment-required">是否必备</label>
+      <Select
+        id="equipment-required"
+        v-model="equipmentForm.isRequired"
+        :options="isRequiredOptions"
+        option-label="label"
+        option-value="value"
+        class="w-full"
+      />
+    </div>
+    <template #footer>
+      <Button label="取消" text @click="equipmentDialogVisible = false" />
+      <Button label="保存" icon="pi pi-check" @click="saveEquipment" />
+    </template>
+  </Dialog>
 </template>
 
 <style scoped>
@@ -293,6 +425,10 @@ onMounted(async () => {
 .section-header h2 {
   font-size: 1.125rem;
   font-weight: 600;
+}
+
+.equipment-table {
+  margin-top: 1.5rem;
 }
 
 .coords {

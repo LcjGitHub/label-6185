@@ -295,6 +295,80 @@ def delete_marker(marker_id):
         conn.close()
 
 
+# ── 装备 CRUD ──────────────────────────────────────────────
+
+
+@app.get("/api/routes/<int:route_id>/equipment")
+def list_equipment(route_id):
+    """获取某条路线的全部装备清单。"""
+    conn = get_connection()
+    try:
+        route = conn.execute(
+            "SELECT id FROM routes WHERE id = ?", (route_id,)
+        ).fetchone()
+        if not route:
+            return jsonify({"error": "路线不存在"}), 404
+        rows = conn.execute(
+            """SELECT id, route_id, name, is_required
+               FROM equipment WHERE route_id = ? ORDER BY is_required DESC, id""",
+            (route_id,),
+        ).fetchall()
+        return jsonify([row_to_dict(r) for r in rows])
+    finally:
+        conn.close()
+
+
+@app.post("/api/routes/<int:route_id>/equipment")
+def create_equipment(route_id):
+    """在某条路线下新增装备。"""
+    data = request.get_json(silent=True) or {}
+    name = (data.get("name") or "").strip()
+    is_required = data.get("isRequired", 0)
+    if not name:
+        return jsonify({"error": "装备名称不能为空"}), 400
+    try:
+        is_required = int(is_required)
+        if is_required not in (0, 1):
+            raise ValueError
+    except (TypeError, ValueError):
+        return jsonify({"error": "是否必备必须为 0 或 1"}), 400
+    conn = get_connection()
+    try:
+        route = conn.execute(
+            "SELECT id FROM routes WHERE id = ?", (route_id,)
+        ).fetchone()
+        if not route:
+            return jsonify({"error": "路线不存在"}), 404
+        cur = conn.execute(
+            """INSERT INTO equipment (route_id, name, is_required)
+               VALUES (?, ?, ?)""",
+            (route_id, name, is_required),
+        )
+        conn.commit()
+        row = conn.execute(
+            """SELECT id, route_id, name, is_required
+               FROM equipment WHERE id = ?""",
+            (cur.lastrowid,),
+        ).fetchone()
+        return jsonify(row_to_dict(row)), 201
+    finally:
+        conn.close()
+
+
+@app.delete("/api/equipment/<int:equipment_id>")
+def delete_equipment(equipment_id):
+    """删除装备。"""
+    conn = get_connection()
+    try:
+        cur = conn.execute("DELETE FROM equipment WHERE id = ?", (equipment_id,))
+        conn.commit()
+        if cur.rowcount == 0:
+            return jsonify({"error": "装备不存在"}), 404
+        return "", 204
+    finally:
+        conn.close()
+
+
 if __name__ == "__main__":
     init_db()
     app.run(host="0.0.0.0", port=7000, debug=True)
