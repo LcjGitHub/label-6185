@@ -71,6 +71,7 @@ async function loadStats() {
     stats.value = await statsApi.get()
   } catch {
     stats.value = null
+    toast.add({ severity: 'error', summary: '加载失败', detail: '无法获取统计数据', life: 3000 })
   } finally {
     statsLoading.value = false
   }
@@ -220,30 +221,15 @@ onMounted(async () => {
   </div>
 
   <div class="stats-bar">
-    <div class="stats-row">
-      <div class="stat-item">
-        <span class="stat-label">路线总数</span>
-        <span class="stat-value">{{ statsLoading ? '--' : (stats?.routeCount ?? 0) }}</span>
-        <span class="stat-unit">条</span>
-      </div>
-      <div class="stat-divider"></div>
-      <div class="stat-item">
-        <span class="stat-label">标记点总数</span>
-        <span class="stat-value">{{ statsLoading ? '--' : (stats?.markerCount ?? 0) }}</span>
-        <span class="stat-unit">个</span>
-      </div>
+    <div class="stat-row">
+      <span class="stat-label">路线总数</span>
+      <span class="stat-value">{{ statsLoading ? '--' : (stats?.routeCount ?? 0) }}</span>
+      <span class="stat-unit">条</span>
     </div>
-    <div class="stats-row stats-row-secondary">
-      <div class="stat-item stat-item-secondary">
-        <span class="stat-label">水源点</span>
-        <span class="stat-value stat-value-secondary">{{ statsLoading ? '--' : (stats?.waterCount ?? 0) }}</span>
-        <span class="stat-unit">处</span>
-      </div>
-      <div class="stat-item stat-item-secondary">
-        <span class="stat-label">休息点</span>
-        <span class="stat-value stat-value-secondary">{{ statsLoading ? '--' : (stats?.restCount ?? 0) }}</span>
-        <span class="stat-unit">处</span>
-      </div>
+    <div class="stat-row stat-row-secondary">
+      <span class="stat-label">标记点总数</span>
+      <span class="stat-value stat-value-secondary">{{ statsLoading ? '--' : (stats?.markerCount ?? 0) }}</span>
+      <span class="stat-unit">个</span>
     </div>
   </div>
 
@@ -355,27 +341,14 @@ onMounted(async () => {
   border: 1px solid #dbeafe;
 }
 
-.stats-row {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-}
-
-.stats-row-secondary {
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px dashed #cbd5e1;
-  gap: 2rem;
-}
-
-.stat-item {
+.stat-row {
   display: flex;
   align-items: baseline;
   gap: 0.5rem;
 }
 
-.stat-item-secondary {
-  gap: 0.375rem;
+.stat-row-secondary {
+  margin-top: 0.625rem;
 }
 
 .stat-label {
@@ -391,7 +364,7 @@ onMounted(async () => {
 }
 
 .stat-value-secondary {
-  font-size: 1rem;
+  font-size: 1.125rem;
   font-weight: 600;
   color: #0f766e;
 }
@@ -399,12 +372,6 @@ onMounted(async () => {
 .stat-unit {
   font-size: 0.875rem;
   color: #64748b;
-}
-
-.stat-divider {
-  width: 1px;
-  height: 1.75rem;
-  background: #cbd5e1;
 }
 
 .header-actions {
