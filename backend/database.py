@@ -84,12 +84,40 @@ def _migrate_routes_mileage_days(conn: sqlite3.Connection) -> None:
 
 
 def _migrate_markers_reliability(conn: sqlite3.Connection) -> None:
-    """升级旧数据库：检测 markers 表是否缺少 reliability 字段，缺少则追加。"""
+    """升级旧数据库：检测 markers 表是否缺少 reliability 字段，缺少则追加并回填种子数据。"""
     columns = [row["name"] for row in conn.execute("PRAGMA table_info(markers)").fetchall()]
     if "reliability" in columns:
         return
     conn.execute(
         "ALTER TABLE markers ADD COLUMN reliability TEXT CHECK (reliability IN ('高', '中', '低'))"
+    )
+    conn.execute(
+        """
+        UPDATE markers SET reliability = '高'
+        WHERE marker_type = '水源' AND coordinates = 'N28.4123 E98.7891'
+          AND route_id IN (SELECT id FROM routes WHERE name LIKE '%雨崩冰湖%')
+        """
+    )
+    conn.execute(
+        """
+        UPDATE markers SET reliability = '中'
+        WHERE marker_type = '水源' AND coordinates = 'N28.4189 E98.7955'
+          AND route_id IN (SELECT id FROM routes WHERE name LIKE '%雨崩冰湖%')
+        """
+    )
+    conn.execute(
+        """
+        UPDATE markers SET reliability = '高'
+        WHERE marker_type = '水源' AND coordinates = 'N29.8234 E99.1234'
+          AND route_id IN (SELECT id FROM routes WHERE name LIKE '%格聂%')
+        """
+    )
+    conn.execute(
+        """
+        UPDATE markers SET reliability = '低'
+        WHERE marker_type = '水源' AND coordinates = 'N29.8301 E99.1302'
+          AND route_id IN (SELECT id FROM routes WHERE name LIKE '%格聂%')
+        """
     )
 
 

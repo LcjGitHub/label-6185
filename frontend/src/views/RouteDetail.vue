@@ -116,8 +116,9 @@ async function saveMarker() {
     }
     dialogVisible.value = false
     await loadMarkers()
-  } catch {
-    toast.add({ severity: 'error', summary: '保存失败', life: 3000 })
+  } catch (err) {
+    const detail = err?.response?.data?.error || '请稍后重试'
+    toast.add({ severity: 'error', summary: '保存失败', detail, life: 3000 })
   }
 }
 
