@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
@@ -183,6 +183,11 @@ onMounted(async () => {
   await Promise.all([loadRegions(), loadDifficulties(), loadStats()])
   await loadRoutes()
 })
+
+onActivated(() => {
+  loadRoutes()
+  loadStats()
+})
 </script>
 
 <template>
@@ -261,7 +266,7 @@ onMounted(async () => {
         <span class="mileage-text">{{ data.mileage ?? 0 }} 公里</span>
       </template>
     </Column>
-    <Column field="marker_count" header="标记点数量" style="width: 8rem">
+    <Column field="marker_count" header="标记点数量" style="width: 10rem">
       <template #body="{ data }">
         <span class="marker-count-text">{{ data.marker_count ?? 0 }} 个</span>
       </template>
