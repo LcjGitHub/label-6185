@@ -52,19 +52,24 @@ def get_stats():
 
 @app.get("/api/routes")
 def list_routes():
-    """获取全部路线列表，支持按地区筛选。"""
+    """获取全部路线列表，支持按地区和难度筛选。"""
     region = request.args.get("region", "").strip()
+    difficulty = request.args.get("difficulty", "").strip()
     conn = get_connection()
     try:
+        conditions = []
+        params = []
         if region:
-            rows = conn.execute(
-                "SELECT id, name, difficulty, region, mileage, days FROM routes WHERE region = ? ORDER BY id",
-                (region,),
-            ).fetchall()
-        else:
-            rows = conn.execute(
-                "SELECT id, name, difficulty, region, mileage, days FROM routes ORDER BY id"
-            ).fetchall()
+            conditions.append("region = ?")
+            params.append(region)
+        if difficulty:
+            conditions.append("difficulty = ?")
+            params.append(difficulty)
+        where = (" WHERE " + " AND ".join(conditions)) if conditions else ""
+        rows = conn.execute(
+            f"SELECT id, name, difficulty, region, mileage, days FROM routes{where} ORDER BY id",
+            params,
+        ).fetchall()
         return jsonify([row_to_dict(r) for r in rows])
     finally:
         conn.close()
@@ -79,6 +84,19 @@ def list_regions():
             "SELECT DISTINCT region FROM routes WHERE region IS NOT NULL AND region != '' ORDER BY region"
         ).fetchall()
         return jsonify([row["region"] for row in rows])
+    finally:
+        conn.close()
+
+
+@app.get("/api/routes/difficulties")
+def list_difficulties():
+    """获取所有难度列表（去重）。"""
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT DISTINCT difficulty FROM routes WHERE difficulty IS NOT NULL AND difficulty != '' ORDER BY difficulty"
+        ).fetchall()
+        return jsonify([row["difficulty"] for row in rows])
     finally:
         conn.close()
 

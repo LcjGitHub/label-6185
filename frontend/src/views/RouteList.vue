@@ -25,7 +25,9 @@ const dialogVisible = ref(false)
 const editingRoute = ref(null)
 const form = ref({ name: '', difficulty: '', region: '', mileage: 0, days: 0 })
 const selectedRegion = ref('')
+const selectedDifficulty = ref('')
 const regionOptions = ref([])
+const difficultyFilterOptions = ref([])
 
 const difficultyOptions = [
   { label: '简单', value: '简单' },
@@ -50,7 +52,10 @@ function getSeverity(difficulty) {
 async function loadRoutes() {
   loading.value = true
   try {
-    routes.value = await routeApi.list(selectedRegion.value || undefined)
+    routes.value = await routeApi.list(
+      selectedRegion.value || undefined,
+      selectedDifficulty.value || undefined,
+    )
   } catch {
     toast.add({ severity: 'error', summary: '加载失败', detail: '无法获取路线列表', life: 3000 })
   } finally {
@@ -71,6 +76,28 @@ async function loadRegions() {
 }
 
 async function onRegionChange() {
+  await loadRoutes()
+}
+
+async function loadDifficulties() {
+  try {
+    const difficulties = await routeApi.difficulties()
+    difficultyFilterOptions.value = [
+      { label: '全部难度', value: '' },
+      ...difficulties.map((d) => ({ label: d, value: d })),
+    ]
+  } catch {
+    difficultyFilterOptions.value = [{ label: '全部难度', value: '' }]
+  }
+}
+
+async function onDifficultyChange() {
+  await loadRoutes()
+}
+
+async function resetFilters() {
+  selectedRegion.value = ''
+  selectedDifficulty.value = ''
   await loadRoutes()
 }
 
@@ -139,7 +166,7 @@ function goDetail(route) {
 }
 
 onMounted(async () => {
-  await loadRegions()
+  await Promise.all([loadRegions(), loadDifficulties()])
   await loadRoutes()
 })
 </script>
@@ -157,8 +184,23 @@ onMounted(async () => {
         option-label="label"
         option-value="value"
         placeholder="选择地区"
-        class="region-filter"
+        class="filter-select"
         @change="onRegionChange"
+      />
+      <Select
+        v-model="selectedDifficulty"
+        :options="difficultyFilterOptions"
+        option-label="label"
+        option-value="value"
+        placeholder="选择难度"
+        class="filter-select"
+        @change="onDifficultyChange"
+      />
+      <Button
+        label="重置"
+        icon="pi pi-filter-slash"
+        text
+        @click="resetFilters"
       />
       <Button label="新建路线" icon="pi pi-plus" @click="openCreate" />
     </div>
@@ -270,7 +312,7 @@ onMounted(async () => {
   gap: 0.75rem;
 }
 
-.region-filter {
+.filter-select {
   width: 10rem;
 }
 

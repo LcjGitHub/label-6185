@@ -10,10 +10,12 @@ const api = axios.create({
 /** @typedef {{ id: number, route_id: number, name: string, is_required: number }} Equipment */
 
 export const routeApi = {
-  /** @param {string} [region] @returns {Promise<Route[]>} */
-  list: (region) => api.get('/routes', { params: { region } }).then((r) => r.data),
+  /** @param {string} [region] @param {string} [difficulty] @returns {Promise<Route[]>} */
+  list: (region, difficulty) => api.get('/routes', { params: { region, difficulty } }).then((r) => r.data),
   /** @returns {Promise<string[]>} */
   regions: () => api.get('/routes/regions').then((r) => r.data),
+  /** @returns {Promise<string[]>} */
+  difficulties: () => api.get('/routes/difficulties').then((r) => r.data),
   /** @param {number} id @returns {Promise<Route>} */
   get: (id) => api.get(`/routes/${id}`).then((r) => r.data),
   /** @param {{ name: string, difficulty: string, region: string, mileage?: number, days?: number }} data @returns {Promise<Route>} */
