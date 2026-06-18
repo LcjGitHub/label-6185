@@ -61,12 +61,24 @@ def _migrate_routes_region(conn: sqlite3.Connection) -> None:
 
 
 def _migrate_routes_mileage_days(conn: sqlite3.Connection) -> None:
-    """升级旧数据库：检测 routes 表是否缺少 mileage/days 字段，缺少则追加并回填默认值。"""
+    """升级旧数据库：检测 routes 表是否缺少 mileage/days 字段，缺少则追加并回填种子路线数据。"""
     columns = [row["name"] for row in conn.execute("PRAGMA table_info(routes)").fetchall()]
+    added = False
     if "mileage" not in columns:
         conn.execute("ALTER TABLE routes ADD COLUMN mileage REAL DEFAULT 0")
+        added = True
     if "days" not in columns:
         conn.execute("ALTER TABLE routes ADD COLUMN days REAL DEFAULT 0")
+        added = True
+    if added:
+        conn.execute(
+            "UPDATE routes SET mileage = ?, days = ? WHERE name LIKE '%雨崩冰湖%'",
+            (18.5, 2.0),
+        )
+        conn.execute(
+            "UPDATE routes SET mileage = ?, days = ? WHERE name LIKE '%格聂%'",
+            (52.0, 4.0),
+        )
 
 
 def _seed_data(conn: sqlite3.Connection) -> None:

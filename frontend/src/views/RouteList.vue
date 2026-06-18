@@ -108,8 +108,9 @@ async function saveRoute() {
     }
     dialogVisible.value = false
     await Promise.all([loadRoutes(), loadRegions()])
-  } catch {
-    toast.add({ severity: 'error', summary: '保存失败', life: 3000 })
+  } catch (err) {
+    const detail = err?.response?.data?.error || '请稍后重试'
+    toast.add({ severity: 'error', summary: '保存失败', detail, life: 3000 })
   }
 }
 
@@ -186,9 +187,9 @@ onMounted(async () => {
         <Tag :value="data.region" severity="info" icon="pi pi-map-marker" />
       </template>
     </Column>
-    <Column field="mileage" header="里程(km)" style="width: 8rem">
+    <Column field="mileage" header="里程(公里)" style="width: 8rem">
       <template #body="{ data }">
-        <span class="mileage-text">{{ data.mileage ?? 0 }} km</span>
+        <span class="mileage-text">{{ data.mileage ?? 0 }} 公里</span>
       </template>
     </Column>
     <Column field="days" header="徒步天数" style="width: 8rem">

@@ -140,7 +140,7 @@ onMounted(async () => {
   <div v-if="route" class="route-info">
     <h1>{{ route.name }}</h1>
     <Tag :value="route.difficulty" :severity="difficultySeverity[route.difficulty] || 'secondary'" />
-    <Tag :value="`${route.mileage ?? 0} km`" severity="info" icon="pi pi-route" />
+    <Tag :value="`${route.mileage ?? 0} 公里`" severity="info" icon="pi pi-route" />
     <Tag :value="`${route.days ?? 0} 天`" severity="success" icon="pi pi-clock" />
   </div>
   <div v-else-if="loadingRoute" class="loading-hint">加载中…</div>
