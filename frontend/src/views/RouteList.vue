@@ -13,13 +13,15 @@ import Select from 'primevue/select'
 import Tag from 'primevue/tag'
 import Toast from 'primevue/toast'
 import ConfirmDialog from 'primevue/confirmdialog'
-import { routeApi } from '../api'
+import { routeApi, statsApi } from '../api'
 
 const router = useRouter()
 const toast = useToast()
 const confirm = useConfirm()
 
 const routes = ref([])
+const stats = ref(null)
+const statsLoading = ref(false)
 const loading = ref(false)
 const dialogVisible = ref(false)
 const editingRoute = ref(null)
@@ -60,6 +62,17 @@ async function loadRoutes() {
     toast.add({ severity: 'error', summary: '加载失败', detail: '无法获取路线列表', life: 3000 })
   } finally {
     loading.value = false
+  }
+}
+
+async function loadStats() {
+  statsLoading.value = true
+  try {
+    stats.value = await statsApi.get()
+  } catch {
+    stats.value = null
+  } finally {
+    statsLoading.value = false
   }
 }
 
@@ -134,7 +147,7 @@ async function saveRoute() {
       toast.add({ severity: 'success', summary: '已创建', life: 2000 })
     }
     dialogVisible.value = false
-    await Promise.all([loadRoutes(), loadRegions(), loadDifficulties()])
+    await Promise.all([loadRoutes(), loadRegions(), loadDifficulties(), loadStats()])
   } catch (err) {
     const detail = err?.response?.data?.error || '请稍后重试'
     toast.add({ severity: 'error', summary: '保存失败', detail, life: 3000 })
@@ -152,7 +165,7 @@ function confirmDelete(route) {
       try {
         await routeApi.remove(route.id)
         toast.add({ severity: 'success', summary: '已删除', life: 2000 })
-        await Promise.all([loadRoutes(), loadDifficulties()])
+        await Promise.all([loadRoutes(), loadDifficulties(), loadStats()])
       } catch {
         toast.add({ severity: 'error', summary: '删除失败', life: 3000 })
       }
@@ -166,7 +179,7 @@ function goDetail(route) {
 }
 
 onMounted(async () => {
-  await Promise.all([loadRegions(), loadDifficulties()])
+  await Promise.all([loadRegions(), loadDifficulties(), loadStats()])
   await loadRoutes()
 })
 </script>
@@ -203,6 +216,34 @@ onMounted(async () => {
         @click="resetFilters"
       />
       <Button label="新建路线" icon="pi pi-plus" @click="openCreate" />
+    </div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stats-row">
+      <div class="stat-item">
+        <span class="stat-label">路线总数</span>
+        <span class="stat-value">{{ statsLoading ? '--' : (stats?.routeCount ?? 0) }}</span>
+        <span class="stat-unit">条</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-label">标记点总数</span>
+        <span class="stat-value">{{ statsLoading ? '--' : (stats?.markerCount ?? 0) }}</span>
+        <span class="stat-unit">个</span>
+      </div>
+    </div>
+    <div class="stats-row stats-row-secondary">
+      <div class="stat-item stat-item-secondary">
+        <span class="stat-label">水源点</span>
+        <span class="stat-value stat-value-secondary">{{ statsLoading ? '--' : (stats?.waterCount ?? 0) }}</span>
+        <span class="stat-unit">处</span>
+      </div>
+      <div class="stat-item stat-item-secondary">
+        <span class="stat-label">休息点</span>
+        <span class="stat-value stat-value-secondary">{{ statsLoading ? '--' : (stats?.restCount ?? 0) }}</span>
+        <span class="stat-unit">处</span>
+      </div>
     </div>
   </div>
 
@@ -304,6 +345,66 @@ onMounted(async () => {
 .page-header h1 {
   font-size: 1.5rem;
   font-weight: 700;
+}
+
+.stats-bar {
+  background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+  border-radius: 0.75rem;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+  border: 1px solid #dbeafe;
+}
+
+.stats-row {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.stats-row-secondary {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed #cbd5e1;
+  gap: 2rem;
+}
+
+.stat-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.stat-item-secondary {
+  gap: 0.375rem;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e40af;
+}
+
+.stat-value-secondary {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #0f766e;
+}
+
+.stat-unit {
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.stat-divider {
+  width: 1px;
+  height: 1.75rem;
+  background: #cbd5e1;
 }
 
 .header-actions {
