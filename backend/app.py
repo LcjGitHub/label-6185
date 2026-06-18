@@ -16,6 +16,11 @@ def row_to_dict(row):
 
 VALID_RELIABILITIES = ("高", "中", "低")
 
+VALID_MONTHS = (
+    "一月", "二月", "三月", "四月", "五月", "六月",
+    "七月", "八月", "九月", "十月", "十一月", "十二月",
+)
+
 
 def validate_reliability(reliability, marker_type):
     """校验可靠性字段：水源类型必须为高/中/低，休息类型必须为空。"""
@@ -71,7 +76,7 @@ def list_routes():
             params.append(difficulty)
         where = (" WHERE " + " AND ".join(conditions)) if conditions else ""
         rows = conn.execute(
-            f"""SELECT r.id, r.name, r.difficulty, r.region, r.mileage, r.days,
+            f"""SELECT r.id, r.name, r.difficulty, r.region, r.mileage, r.days, r.best_month,
                        (SELECT COUNT(*) FROM markers WHERE route_id = r.id) AS marker_count
                 FROM routes r{where} ORDER BY r.id""",
             params,
@@ -113,7 +118,7 @@ def get_route(route_id):
     conn = get_connection()
     try:
         row = conn.execute(
-            "SELECT id, name, difficulty, region, mileage, days FROM routes WHERE id = ?", (route_id,)
+            "SELECT id, name, difficulty, region, mileage, days, best_month FROM routes WHERE id = ?", (route_id,)
         ).fetchone()
         if not row:
             return jsonify({"error": "路线不存在"}), 404
@@ -129,10 +134,13 @@ def create_route():
     name = (data.get("name") or "").strip()
     difficulty = (data.get("difficulty") or "").strip()
     region = (data.get("region") or "").strip()
+    best_month = (data.get("bestMonth") or "").strip()
     mileage = data.get("mileage", 0)
     days = data.get("days", 0)
-    if not name or not difficulty or not region:
-        return jsonify({"error": "名称、难度和地区不能为空"}), 400
+    if not name or not difficulty or not region or not best_month:
+        return jsonify({"error": "名称、难度、地区和最佳月份不能为空"}), 400
+    if best_month not in VALID_MONTHS:
+        return jsonify({"error": "最佳月份必须为一月至十二月"}), 400
     try:
         mileage = float(mileage)
         days = float(days)
@@ -143,12 +151,12 @@ def create_route():
     conn = get_connection()
     try:
         cur = conn.execute(
-            "INSERT INTO routes (name, difficulty, region, mileage, days) VALUES (?, ?, ?, ?, ?)",
-            (name, difficulty, region, mileage, days),
+            "INSERT INTO routes (name, difficulty, region, mileage, days, best_month) VALUES (?, ?, ?, ?, ?, ?)",
+            (name, difficulty, region, mileage, days, best_month),
         )
         conn.commit()
         row = conn.execute(
-            "SELECT id, name, difficulty, region, mileage, days FROM routes WHERE id = ?",
+            "SELECT id, name, difficulty, region, mileage, days, best_month FROM routes WHERE id = ?",
             (cur.lastrowid,),
         ).fetchone()
         return jsonify(row_to_dict(row)), 201
@@ -163,10 +171,13 @@ def update_route(route_id):
     name = (data.get("name") or "").strip()
     difficulty = (data.get("difficulty") or "").strip()
     region = (data.get("region") or "").strip()
+    best_month = (data.get("bestMonth") or "").strip()
     mileage = data.get("mileage", 0)
     days = data.get("days", 0)
-    if not name or not difficulty or not region:
-        return jsonify({"error": "名称、难度和地区不能为空"}), 400
+    if not name or not difficulty or not region or not best_month:
+        return jsonify({"error": "名称、难度、地区和最佳月份不能为空"}), 400
+    if best_month not in VALID_MONTHS:
+        return jsonify({"error": "最佳月份必须为一月至十二月"}), 400
     try:
         mileage = float(mileage)
         days = float(days)
@@ -177,14 +188,14 @@ def update_route(route_id):
     conn = get_connection()
     try:
         cur = conn.execute(
-            "UPDATE routes SET name = ?, difficulty = ?, region = ?, mileage = ?, days = ? WHERE id = ?",
-            (name, difficulty, region, mileage, days, route_id),
+            "UPDATE routes SET name = ?, difficulty = ?, region = ?, mileage = ?, days = ?, best_month = ? WHERE id = ?",
+            (name, difficulty, region, mileage, days, best_month, route_id),
         )
         conn.commit()
         if cur.rowcount == 0:
             return jsonify({"error": "路线不存在"}), 404
         row = conn.execute(
-            "SELECT id, name, difficulty, region, mileage, days FROM routes WHERE id = ?", (route_id,)
+            "SELECT id, name, difficulty, region, mileage, days, best_month FROM routes WHERE id = ?", (route_id,)
         ).fetchone()
         return jsonify(row_to_dict(row))
     finally:
@@ -211,7 +222,7 @@ def clone_route(route_id):
     conn = get_connection()
     try:
         route = conn.execute(
-            "SELECT id, name, difficulty, region, mileage, days FROM routes WHERE id = ?",
+            "SELECT id, name, difficulty, region, mileage, days, best_month FROM routes WHERE id = ?",
             (route_id,),
         ).fetchone()
         if not route:
@@ -230,8 +241,8 @@ def clone_route(route_id):
         new_name = route["name"] + "副本"
 
         cur = conn.execute(
-            "INSERT INTO routes (name, difficulty, region, mileage, days) VALUES (?, ?, ?, ?, ?)",
-            (new_name, route["difficulty"], route["region"], route["mileage"], route["days"]),
+            "INSERT INTO routes (name, difficulty, region, mileage, days, best_month) VALUES (?, ?, ?, ?, ?, ?)",
+            (new_name, route["difficulty"], route["region"], route["mileage"], route["days"], route["best_month"]),
         )
         new_route_id = cur.lastrowid
 
@@ -250,7 +261,7 @@ def clone_route(route_id):
         conn.commit()
 
         new_route = conn.execute(
-            "SELECT id, name, difficulty, region, mileage, days FROM routes WHERE id = ?",
+            "SELECT id, name, difficulty, region, mileage, days, best_month FROM routes WHERE id = ?",
             (new_route_id,),
         ).fetchone()
         return jsonify(row_to_dict(new_route)), 201
@@ -378,7 +389,7 @@ def export_route(route_id):
     conn = get_connection()
     try:
         route = conn.execute(
-            "SELECT id, name, region, mileage, days FROM routes WHERE id = ?",
+            "SELECT id, name, region, mileage, days, best_month FROM routes WHERE id = ?",
             (route_id,),
         ).fetchone()
         if not route:
@@ -393,6 +404,7 @@ def export_route(route_id):
         lines = []
         lines.append(f"路线名称：{route['name']}")
         lines.append(f"地区：{route['region']}")
+        lines.append(f"最佳徒步月份：{route['best_month']}")
         lines.append(f"里程：{route['mileage']} 公里")
         lines.append(f"天数：{route['days']} 天")
         lines.append("")

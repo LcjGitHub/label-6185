@@ -5,7 +5,7 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
-/** @typedef {{ id: number, name: string, difficulty: string, region: string, mileage: number, days: number, marker_count: number }} Route */
+/** @typedef {{ id: number, name: string, difficulty: string, region: string, mileage: number, days: number, best_month: string, marker_count: number }} Route */
 /** @typedef {{ id: number, route_id: number, type: '水源' | '休息', coordinates: string, notes: string, reliability?: '高' | '中' | '低' | null }} Marker */
 /** @typedef {{ id: number, route_id: number, name: string, is_required: number }} Equipment */
 
@@ -18,9 +18,9 @@ export const routeApi = {
   difficulties: () => api.get('/routes/difficulties').then((r) => r.data),
   /** @param {number} id @returns {Promise<Route>} */
   get: (id) => api.get(`/routes/${id}`).then((r) => r.data),
-  /** @param {{ name: string, difficulty: string, region: string, mileage?: number, days?: number }} data @returns {Promise<Route>} */
+  /** @param {{ name: string, difficulty: string, region: string, bestMonth: string, mileage?: number, days?: number }} data @returns {Promise<Route>} */
   create: (data) => api.post('/routes', data).then((r) => r.data),
-  /** @param {number} id @param {{ name: string, difficulty: string, region: string, mileage?: number, days?: number }} data @returns {Promise<Route>} */
+  /** @param {number} id @param {{ name: string, difficulty: string, region: string, bestMonth: string, mileage?: number, days?: number }} data @returns {Promise<Route>} */
   update: (id, data) => api.put(`/routes/${id}`, data).then((r) => r.data),
   /** @param {number} id */
   remove: (id) => api.delete(`/routes/${id}`),

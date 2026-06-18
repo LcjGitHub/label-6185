@@ -28,7 +28,8 @@ def init_db() -> None:
                 difficulty TEXT NOT NULL,
                 region TEXT NOT NULL,
                 mileage REAL DEFAULT 0,
-                days REAL DEFAULT 0
+                days REAL DEFAULT 0,
+                best_month TEXT NOT NULL DEFAULT ''
             );
 
             CREATE TABLE IF NOT EXISTS markers (
@@ -52,6 +53,7 @@ def init_db() -> None:
         )
         _migrate_routes_region(conn)
         _migrate_routes_mileage_days(conn)
+        _migrate_routes_best_month(conn)
         _migrate_markers_reliability(conn)
         _migrate_equipment_seed(conn)
         count = conn.execute("SELECT COUNT(*) FROM routes").fetchone()[0]
@@ -90,6 +92,22 @@ def _migrate_routes_mileage_days(conn: sqlite3.Connection) -> None:
             "UPDATE routes SET mileage = ?, days = ? WHERE name LIKE '%格聂%'",
             (52.0, 4.0),
         )
+
+
+def _migrate_routes_best_month(conn: sqlite3.Connection) -> None:
+    """升级旧数据库：检测 routes 表是否缺少 best_month 字段，缺少则追加并回填种子路线数据。"""
+    columns = [row["name"] for row in conn.execute("PRAGMA table_info(routes)").fetchall()]
+    if "best_month" in columns:
+        return
+    conn.execute("ALTER TABLE routes ADD COLUMN best_month TEXT NOT NULL DEFAULT ''")
+    conn.execute(
+        "UPDATE routes SET best_month = ? WHERE name LIKE '%雨崩冰湖%'",
+        ("六至八月",),
+    )
+    conn.execute(
+        "UPDATE routes SET best_month = ? WHERE name LIKE '%格聂%'",
+        ("九至十一月",),
+    )
 
 
 def _migrate_markers_reliability(conn: sqlite3.Connection) -> None:
@@ -159,13 +177,13 @@ def _migrate_equipment_seed(conn: sqlite3.Connection) -> None:
 def _seed_data(conn: sqlite3.Connection) -> None:
     """写入 2 条路线、各 3 个标记点。"""
     routes = [
-        ("雨崩冰湖线", "困难", "云南", 18.5, 2.0),
-        ("格聂C线", "极难", "四川", 52.0, 4.0),
+        ("雨崩冰湖线", "困难", "云南", 18.5, 2.0, "六至八月"),
+        ("格聂C线", "极难", "四川", 52.0, 4.0, "九至十一月"),
     ]
-    for name, difficulty, region, mileage, days in routes:
+    for name, difficulty, region, mileage, days, best_month in routes:
         cur = conn.execute(
-            "INSERT INTO routes (name, difficulty, region, mileage, days) VALUES (?, ?, ?, ?, ?)",
-            (name, difficulty, region, mileage, days),
+            "INSERT INTO routes (name, difficulty, region, mileage, days, best_month) VALUES (?, ?, ?, ?, ?, ?)",
+            (name, difficulty, region, mileage, days, best_month),
         )
         route_id = cur.lastrowid
         markers = [

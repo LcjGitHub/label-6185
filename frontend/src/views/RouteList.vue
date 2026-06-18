@@ -27,7 +27,7 @@ const statsLoading = ref(false)
 const loading = ref(false)
 const dialogVisible = ref(false)
 const editingRoute = ref(null)
-const form = ref({ name: '', difficulty: '', region: '', mileage: 0, days: 0 })
+const form = ref({ name: '', difficulty: '', region: '', bestMonth: '', mileage: 0, days: 0 })
 const selectedRegion = ref('')
 const selectedDifficulty = ref('')
 const searchNameInput = ref('')
@@ -40,6 +40,21 @@ const difficultyOptions = [
   { label: '中等', value: '中等' },
   { label: '困难', value: '困难' },
   { label: '极难', value: '极难' },
+]
+
+const monthOptions = [
+  { label: '一月', value: '一月' },
+  { label: '二月', value: '二月' },
+  { label: '三月', value: '三月' },
+  { label: '四月', value: '四月' },
+  { label: '五月', value: '五月' },
+  { label: '六月', value: '六月' },
+  { label: '七月', value: '七月' },
+  { label: '八月', value: '八月' },
+  { label: '九月', value: '九月' },
+  { label: '十月', value: '十月' },
+  { label: '十一月', value: '十一月' },
+  { label: '十二月', value: '十二月' },
 ]
 
 /** 难度对应 Tag 颜色 */
@@ -135,7 +150,7 @@ function clearSearch() {
 
 function openCreate() {
   editingRoute.value = null
-  form.value = { name: '', difficulty: '中等', region: '', mileage: 0, days: 0 }
+  form.value = { name: '', difficulty: '中等', region: '', bestMonth: '', mileage: 0, days: 0 }
   dialogVisible.value = true
 }
 
@@ -146,6 +161,7 @@ function openEdit(route) {
     name: route.name,
     difficulty: route.difficulty,
     region: route.region,
+    bestMonth: route.best_month ?? '',
     mileage: route.mileage ?? 0,
     days: route.days ?? 0,
   }
@@ -153,7 +169,7 @@ function openEdit(route) {
 }
 
 async function saveRoute() {
-  if (!form.value.name.trim() || !form.value.difficulty || !form.value.region.trim()) {
+  if (!form.value.name.trim() || !form.value.difficulty || !form.value.region.trim() || !form.value.bestMonth) {
     toast.add({ severity: 'warn', summary: '请填写完整', life: 2500 })
     return
   }
@@ -308,6 +324,11 @@ onActivated(() => {
         <Tag :value="data.region" severity="info" icon="pi pi-map-marker" />
       </template>
     </Column>
+    <Column field="best_month" header="最佳月份" style="width: 8rem">
+      <template #body="{ data }">
+        <Tag :value="data.best_month" severity="warning" icon="pi pi-calendar" />
+      </template>
+    </Column>
     <Column field="mileage" header="里程(公里)" style="width: 8rem">
       <template #body="{ data }">
         <span class="mileage-text">{{ data.mileage ?? 0 }} 公里</span>
@@ -364,6 +385,18 @@ onActivated(() => {
     <div class="form-field">
       <label for="route-region">地区</label>
       <InputText id="route-region" v-model="form.region" class="w-full" placeholder="如：云南" />
+    </div>
+    <div class="form-field">
+      <label for="route-best-month">最佳徒步月份</label>
+      <Select
+        id="route-best-month"
+        v-model="form.bestMonth"
+        :options="monthOptions"
+        option-label="label"
+        option-value="value"
+        placeholder="选择月份"
+        class="w-full"
+      />
     </div>
     <div class="form-field">
       <label for="route-mileage">里程(公里)</label>
