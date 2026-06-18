@@ -134,9 +134,13 @@ async function saveMarker() {
 
 /** @param {import('../api').Marker} marker */
 async function copyCoordinates(marker) {
+  if (!marker.coordinates || !marker.coordinates.trim()) {
+    toast.add({ severity: 'warn', summary: '请填写坐标', life: 2500 })
+    return
+  }
   try {
     await copyToClipboard(marker.coordinates)
-    toast.add({ severity: 'success', summary: '复制成功', detail: marker.coordinates, life: 2000 })
+    toast.add({ severity: 'success', summary: '复制成功', life: 2000 })
   } catch {
     toast.add({ severity: 'error', summary: '复制失败', life: 2500 })
   }
@@ -278,15 +282,15 @@ onMounted(async () => {
         <span class="notes">{{ data.notes || '—' }}</span>
       </template>
     </Column>
-    <Column header="操作" style="width: 11rem">
+    <Column header="操作" style="width: 14rem">
       <template #body="{ data }">
         <div class="actions">
           <Button
+            label="复制坐标"
             icon="pi pi-copy"
             text
-            rounded
             severity="info"
-            v-tooltip="'复制坐标'"
+            size="small"
             @click="copyCoordinates(data)"
           />
           <Button icon="pi pi-pencil" text rounded @click="openEdit(data)" />
