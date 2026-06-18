@@ -205,6 +205,59 @@ def delete_route(route_id):
         conn.close()
 
 
+@app.post("/api/routes/<int:route_id>/clone")
+def clone_route(route_id):
+    """克隆路线：复制名称（加「副本」后缀）、难度、地区、里程、天数、标记点和装备。"""
+    conn = get_connection()
+    try:
+        route = conn.execute(
+            "SELECT id, name, difficulty, region, mileage, days FROM routes WHERE id = ?",
+            (route_id,),
+        ).fetchone()
+        if not route:
+            return jsonify({"error": "路线不存在"}), 404
+
+        markers = conn.execute(
+            "SELECT marker_type, coordinates, notes, reliability FROM markers WHERE route_id = ? ORDER BY id",
+            (route_id,),
+        ).fetchall()
+
+        equipment_list = conn.execute(
+            "SELECT name, is_required FROM equipment WHERE route_id = ? ORDER BY is_required DESC, id",
+            (route_id,),
+        ).fetchall()
+
+        new_name = route["name"] + "副本"
+
+        cur = conn.execute(
+            "INSERT INTO routes (name, difficulty, region, mileage, days) VALUES (?, ?, ?, ?, ?)",
+            (new_name, route["difficulty"], route["region"], route["mileage"], route["days"]),
+        )
+        new_route_id = cur.lastrowid
+
+        if markers:
+            conn.executemany(
+                "INSERT INTO markers (route_id, marker_type, coordinates, notes, reliability) VALUES (?, ?, ?, ?, ?)",
+                [(new_route_id, m["marker_type"], m["coordinates"], m["notes"], m["reliability"]) for m in markers],
+            )
+
+        if equipment_list:
+            conn.executemany(
+                "INSERT INTO equipment (route_id, name, is_required) VALUES (?, ?, ?)",
+                [(new_route_id, e["name"], e["is_required"]) for e in equipment_list],
+            )
+
+        conn.commit()
+
+        new_route = conn.execute(
+            "SELECT id, name, difficulty, region, mileage, days FROM routes WHERE id = ?",
+            (new_route_id,),
+        ).fetchone()
+        return jsonify(row_to_dict(new_route)), 201
+    finally:
+        conn.close()
+
+
 # ── 标记点 CRUD ────────────────────────────────────────────
 
 

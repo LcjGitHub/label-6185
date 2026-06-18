@@ -174,6 +174,18 @@ async function saveRoute() {
 }
 
 /** @param {import('../api').Route} route */
+async function cloneRoute(route) {
+  try {
+    await routeApi.clone(route.id)
+    toast.add({ severity: 'success', summary: '克隆成功', detail: `已创建「${route.name}副本」`, life: 3000 })
+    await Promise.all([loadRoutes(), loadRegions(), loadDifficulties(), loadStats()])
+  } catch (err) {
+    const detail = err?.response?.data?.error || '请稍后重试'
+    toast.add({ severity: 'error', summary: '克隆失败', detail, life: 3000 })
+  }
+}
+
+/** @param {import('../api').Route} route */
 function confirmDelete(route) {
   confirm.require({
     message: `确定删除「${route.name}」及其全部标记点？`,
@@ -311,10 +323,11 @@ onActivated(() => {
         <span class="days-text">{{ data.days ?? 0 }} 天</span>
       </template>
     </Column>
-    <Column header="操作" style="width: 12rem">
+    <Column header="操作" style="width: 14rem">
       <template #body="{ data }">
         <div class="actions">
           <Button icon="pi pi-eye" text rounded severity="info" @click="goDetail(data)" v-tooltip.top="'查看详情'" />
+          <Button icon="pi pi-copy" text rounded severity="success" @click="cloneRoute(data)" v-tooltip.top="'克隆路线'" />
           <Button icon="pi pi-pencil" text rounded @click="openEdit(data)" v-tooltip.top="'编辑'" />
           <Button icon="pi pi-trash" text rounded severity="danger" @click="confirmDelete(data)" v-tooltip.top="'删除'" />
         </div>

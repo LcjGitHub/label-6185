@@ -24,6 +24,8 @@ export const routeApi = {
   update: (id, data) => api.put(`/routes/${id}`, data).then((r) => r.data),
   /** @param {number} id */
   remove: (id) => api.delete(`/routes/${id}`),
+  /** @param {number} id @returns {Promise<Route>} */
+  clone: (id) => api.post(`/routes/${id}/clone`).then((r) => r.data),
 }
 
 export const statsApi = {
