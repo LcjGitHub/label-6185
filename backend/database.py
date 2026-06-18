@@ -17,7 +17,7 @@ def get_connection() -> sqlite3.Connection:
 
 
 def init_db() -> None:
-    """创建表结构并写入种子数据（仅在空库时）。"""
+    """创建表结构、升级旧库、写入种子数据。"""
     conn = get_connection()
     try:
         conn.executescript(
@@ -39,12 +39,22 @@ def init_db() -> None:
             );
             """
         )
+        _migrate_routes_region(conn)
         count = conn.execute("SELECT COUNT(*) FROM routes").fetchone()[0]
         if count == 0:
             _seed_data(conn)
         conn.commit()
     finally:
         conn.close()
+
+
+def _migrate_routes_region(conn: sqlite3.Connection) -> None:
+    """升级旧数据库：检测 routes 表是否缺少 region 字段，缺少则追加并回填默认值。"""
+    columns = [row["name"] for row in conn.execute("PRAGMA table_info(routes)").fetchall()]
+    if "region" in columns:
+        return
+    conn.execute("ALTER TABLE routes ADD COLUMN region TEXT")
+    conn.execute("UPDATE routes SET region = '未指定' WHERE region IS NULL OR region = ''")
 
 
 def _seed_data(conn: sqlite3.Connection) -> None:

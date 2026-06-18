@@ -100,7 +100,7 @@ async function saveRoute() {
       toast.add({ severity: 'success', summary: '已创建', life: 2000 })
     }
     dialogVisible.value = false
-    await loadRoutes()
+    await Promise.all([loadRoutes(), loadRegions()])
   } catch {
     toast.add({ severity: 'error', summary: '保存失败', life: 3000 })
   }
