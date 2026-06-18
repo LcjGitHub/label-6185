@@ -134,7 +134,7 @@ async function saveRoute() {
       toast.add({ severity: 'success', summary: '已创建', life: 2000 })
     }
     dialogVisible.value = false
-    await Promise.all([loadRoutes(), loadRegions()])
+    await Promise.all([loadRoutes(), loadRegions(), loadDifficulties()])
   } catch (err) {
     const detail = err?.response?.data?.error || '请稍后重试'
     toast.add({ severity: 'error', summary: '保存失败', detail, life: 3000 })
@@ -152,7 +152,7 @@ function confirmDelete(route) {
       try {
         await routeApi.remove(route.id)
         toast.add({ severity: 'success', summary: '已删除', life: 2000 })
-        await loadRoutes()
+        await Promise.all([loadRoutes(), loadDifficulties()])
       } catch {
         toast.add({ severity: 'error', summary: '删除失败', life: 3000 })
       }
