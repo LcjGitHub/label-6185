@@ -15,6 +15,7 @@ import Toast from 'primevue/toast'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { routeApi, markerApi, equipmentApi } from '../api'
 import { copyToClipboard } from '../utils'
+import { MARKER_FILTER_TYPES, MARKER_FILTER_OPTIONS, filterMarkersByType } from '../utils/markerFilter'
 
 const props = defineProps({
   id: { type: [String, Number], required: true },
@@ -28,6 +29,8 @@ const routeId = computed(() => Number(props.id))
 const route = ref(null)
 const markers = ref([])
 const equipment = ref([])
+const markerFilterType = ref(MARKER_FILTER_TYPES.ALL)
+const filteredMarkers = computed(() => filterMarkersByType(markers.value, markerFilterType.value))
 const loadingRoute = ref(false)
 const loadingMarkers = ref(false)
 const loadingEquipment = ref(false)
@@ -245,8 +248,20 @@ onMounted(async () => {
     <Button label="添加标记" icon="pi pi-map-marker" size="small" @click="openCreate" />
   </div>
 
+  <div class="filter-bar">
+    <Button
+      v-for="option in MARKER_FILTER_OPTIONS"
+      :key="option.value"
+      :label="option.label"
+      :severity="markerFilterType === option.value ? 'primary' : 'secondary'"
+      :outlined="markerFilterType !== option.value"
+      size="small"
+      @click="markerFilterType = option.value"
+    />
+  </div>
+
   <DataTable
-    :value="markers"
+    :value="filteredMarkers"
     :loading="loadingMarkers"
     striped-rows
     row-hover
@@ -449,6 +464,12 @@ onMounted(async () => {
 .section-header h2 {
   font-size: 1.125rem;
   font-weight: 600;
+}
+
+.filter-bar {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
 }
 
 .equipment-table {
